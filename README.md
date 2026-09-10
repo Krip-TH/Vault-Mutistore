@@ -14,6 +14,26 @@ Browser -> React frontend -> Express REST API -> MySQL
 
 The backend owns the normalized product model. Each future adapter can consume its business's existing API format and map it to the common contract documented in [docs/API_CONTRACT.md](docs/API_CONTRACT.md).
 
+## API Integration Workflow
+
+```text
+6 External APIs
+       ↓
+6 Business Adapters
+       ↓
+Normalized Product Format
+       ↓
+Backend API
+       ↓
+Frontend Dashboard
+```
+
+Each business keeps its original API response structure. Its adapter maps that structure to the shared product type, including a consistent stock status, before data reaches the service layer. The existing mock product remains active until real integrations are ready.
+
+External API base URLs are configured in `.env` using `DOOR_API_URL`, `PLUG_API_URL`, `BRANDNAME_API_URL`, `CLOTHING_API_URL`, `POWERBANK_API_URL`, and `PROJECTOR_API_URL`. Start by copying `.env.example`; never commit the resulting `.env` file or API secrets.
+
+See the [API contract](docs/API_CONTRACT.md) for the normalized fields and mapping examples. Group members should follow the [Member API Integration Guide](docs/MEMBER_API_GUIDE.md) when connecting their assigned API.
+
 ## Technology stack
 
 - Frontend: React, Vite, TypeScript, Tailwind CSS
@@ -38,7 +58,7 @@ Moodeng-MultiStore/
 |-- frontend/            React application
 |-- backend/             Express REST API and future adapters
 |-- database/init.sql    MySQL schema and seed data
-|-- docs/API_CONTRACT.md Shared normalized product contract
+|-- docs/                API contract and member integration guide
 |-- docker-compose.yml   Local multi-service environment
 |-- .env.example         Safe environment-variable template
 `-- README.md
@@ -89,7 +109,7 @@ Run `npm install` and `npm run dev` separately in `frontend` and `backend`. Copy
 main
 |-- feature/door-api
 |-- feature/plug-api
-|-- feature/brand-api
+|-- feature/brandname-api
 |-- feature/clothing-api
 |-- feature/powerbank-api
 `-- feature/projector-api
