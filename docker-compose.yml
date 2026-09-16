@@ -25,6 +25,7 @@ services:
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      CLOTHING_API_URL: ${CLOTHING_API_URL}
     volumes:
       - ./backend:/app
       - backend_node_modules:/app/node_modules
