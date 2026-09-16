@@ -111,36 +111,39 @@ Normalized output:
 
 ## Mapping example: Powerbank
 
-A Powerbank API may use completely different property names:
+The Powerbank Stock Product API (see [powerbank-api/README.md](../powerbank-api/README.md)) returns:
 
 ```json
 {
-  "sku": "PB-20000-BLK",
-  "title": "20,000 mAh Fast-Charge Powerbank",
-  "product_type": "Portable Charger",
-  "unit_price": "1290",
-  "quantity_available": "8",
-  "stock_unit": "pcs",
-  "image": "https://example.test/images/pb-20000.jpg",
-  "last_modified": "2026-09-10T12:00:00Z"
+  "id": "PB-001",
+  "name": "Anker PowerCore 10000",
+  "brand": "Anker",
+  "price": 990,
+  "stock": 25,
+  "description": "Compact 10,000mAh power bank with PowerIQ fast charging.",
+  "image": "/images/powerbank/anker-powercore-10000.jpg",
+  "category": "Powerbank",
+  "createdAt": "2026-09-10T12:00:00.000Z",
+  "updatedAt": "2026-09-10T12:00:00.000Z"
 }
 ```
 
-The Powerbank adapter maps `sku` to `id`, `title` to `name`, `unit_price` to `price`, and `quantity_available` to `stock`. It converts the numeric strings and calculates the status:
+The Powerbank adapter maps `id`, `name`, `price`, and `stock` directly, and `updatedAt` to
+`updated_at`. It converts `price` and `stock` to numbers and calculates the status:
 
 ```json
 {
-  "id": "PB-20000-BLK",
+  "id": "PB-001",
   "business": "powerbank",
   "business_name": "Powerbank",
-  "name": "20,000 mAh Fast-Charge Powerbank",
-  "category": "Portable Charger",
-  "price": 1290,
-  "stock": 8,
+  "name": "Anker PowerCore 10000",
+  "category": "Powerbank",
+  "price": 990,
+  "stock": 25,
   "unit": "pcs",
   "status": "In Stock",
-  "image_url": "https://example.test/images/pb-20000.jpg",
-  "updated_at": "2026-09-10T12:00:00Z"
+  "image_url": "/images/powerbank/anker-powercore-10000.jpg",
+  "updated_at": "2026-09-10T12:00:00.000Z"
 }
 ```
 
