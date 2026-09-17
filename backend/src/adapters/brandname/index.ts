@@ -5,7 +5,7 @@ import type { ProductAdapter } from '../types.js';
 export const business = 'brandname' as const;
 export const businessName = 'Brandname';
 
-const DEFAULT_API_BASE_URL = 'http://119.59.102.161:3063/api';
+const DEFAULT_API_URL = 'http://119.59.102.161:3063/api/products';
 const PRODUCTS_PATH = '/products';
 const REQUEST_TIMEOUT_MS = 10_000;
 
@@ -62,10 +62,13 @@ function extractProductList(payload: unknown): unknown[] {
 
 export const brandnameAdapter: ProductAdapter = {
   async getProducts(): Promise<NormalizedProduct[]> {
-    const baseUrl = (process.env.BRANDNAME_API_URL || DEFAULT_API_BASE_URL).replace(/\/+$/, '');
+    const configuredUrl = (process.env.BRANDNAME_API_URL || DEFAULT_API_URL).replace(/\/+$/, '');
+    const url = configuredUrl.endsWith(PRODUCTS_PATH)
+      ? configuredUrl
+      : `${configuredUrl}${PRODUCTS_PATH}`;
 
     try {
-      const response = await fetch(`${baseUrl}${PRODUCTS_PATH}`, {
+      const response = await fetch(url, {
         headers: { Accept: 'application/json' },
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
@@ -76,9 +79,8 @@ export const brandnameAdapter: ProductAdapter = {
 
       return extractProductList(await response.json()).map(normalizeProduct);
     } catch (error) {
-      // Adapters are aggregated with Promise.all, so a Brandname outage must not
-      // take down the other businesses.
-      console.error('[brandname] Failed to load products:', error);
+      // Report this business failure while allowing aggregation to continue.
+      console.error(`[brandname] Product request failed (${url}):`, error);
       return [];
     }
   },

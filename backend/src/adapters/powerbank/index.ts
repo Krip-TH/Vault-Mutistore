@@ -83,9 +83,8 @@ export const powerbankAdapter: ProductAdapter = {
 
       return extractProductList(await response.json()).map(normalizeProduct);
     } catch (error) {
-      // Adapters are aggregated with Promise.all, so a Powerbank outage must not
-      // take down the other businesses.
-      console.error('[powerbank] Failed to load products:', error);
+      // Report this business failure while allowing aggregation to continue.
+      console.error(`[powerbank] Product request failed (${url}):`, error);
       return [];
     }
   },

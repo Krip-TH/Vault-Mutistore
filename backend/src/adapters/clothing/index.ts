@@ -119,7 +119,7 @@ export const clothingAdapter: ProductAdapter = {
 
       return products.map(normalizeProduct);
     } catch (error) {
-      console.error('[clothing] Failed to load products:', error);
+      console.error(`[clothing] Product request failed (${configuredUrl}):`, error);
       return [];
     }
   },
