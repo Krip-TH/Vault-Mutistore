@@ -5,7 +5,6 @@ import type { ProductAdapter } from '../types.js';
 export const business = 'powerbank' as const;
 export const businessName = 'Powerbank';
 
-const DEFAULT_API_URL = 'http://localhost:4000/api/powerbank';
 const REQUEST_TIMEOUT_MS = 10_000;
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -32,12 +31,6 @@ function asString(value: unknown, fallback = ''): string {
   return text === '' ? fallback : text;
 }
 
-/**
- * The Powerbank Stock Product API (powerbank-api/) returns products shaped
- * like: { id: string, name: string, brand: string, price: number,
- * stock: number, description: string, image: string, category: "Powerbank",
- * createdAt: string, updatedAt: string }.
- */
 export function normalizeProduct(sourceProduct: unknown): NormalizedProduct {
   const product = asRecord(sourceProduct);
   const stock = asNumber(product.stock);
@@ -76,7 +69,12 @@ function extractProductList(payload: unknown): unknown[] {
 
 export const powerbankAdapter: ProductAdapter = {
   async getProducts(): Promise<NormalizedProduct[]> {
-    const url = process.env.POWERBANK_API_URL || DEFAULT_API_URL;
+    const url = process.env.POWERBANK_API_URL?.trim();
+
+    if (!url) {
+      console.error('[powerbank] Product request failed: POWERBANK_API_URL is not configured');
+      return [];
+    }
 
     try {
       const response = await fetch(url, {
