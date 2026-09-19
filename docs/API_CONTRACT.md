@@ -111,53 +111,39 @@ Normalized output:
 
 ## Mapping example: Powerbank
 
-The production Powerbank Product API is available at:
-
-```http
-GET http://119.59.102.161:3020/api/products
-```
-
-It returns product records inside a `products` array:
+The Powerbank Stock Product API (see [powerbank-api/README.md](../powerbank-api/README.md)) returns:
 
 ```json
 {
-  "message": "Products fetched successfully",
-  "count": 4,
-  "products": [
-    {
-      "id": 1,
-      "name": "Apple MagSafe Battery Pack",
-      "brand": "Standard",
-      "model": "Standard",
-      "capacity": "1460 mAh",
-      "price": 3890,
-      "stock": 40,
-      "imageUrl": "https://example.com/apple-magsafe-battery-pack.jpg",
-      "colors": [],
-      "features": []
-    }
-  ]
+  "id": "PB-001",
+  "name": "Anker PowerCore 10000",
+  "brand": "Anker",
+  "price": 990,
+  "stock": 25,
+  "description": "Compact 10,000mAh power bank with PowerIQ fast charging.",
+  "image": "/images/powerbank/anker-powercore-10000.jpg",
+  "category": "Powerbank",
+  "createdAt": "2026-09-10T12:00:00.000Z",
+  "updatedAt": "2026-09-10T12:00:00.000Z"
 }
 ```
 
-The Powerbank adapter reads the `products` array while retaining compatibility with direct arrays
-and `data` arrays. It converts `id` to a string, maps `imageUrl` to `image_url`, defaults the
-category to `Powerbank`, converts `price` and `stock` to numbers, calculates the normalized stock
-status, and supplies the normalization time when the upstream record has no update timestamp:
+The Powerbank adapter maps `id`, `name`, `price`, and `stock` directly, and `updatedAt` to
+`updated_at`. It converts `price` and `stock` to numbers and calculates the status:
 
 ```json
 {
-  "id": "1",
+  "id": "PB-001",
   "business": "powerbank",
   "business_name": "Powerbank",
-  "name": "Apple MagSafe Battery Pack",
+  "name": "Anker PowerCore 10000",
   "category": "Powerbank",
-  "price": 3890,
-  "stock": 40,
+  "price": 990,
+  "stock": 25,
   "unit": "pcs",
   "status": "In Stock",
-  "image_url": "https://example.com/apple-magsafe-battery-pack.jpg",
-  "updated_at": "<normalization timestamp>"
+  "image_url": "/images/powerbank/anker-powercore-10000.jpg",
+  "updated_at": "2026-09-10T12:00:00.000Z"
 }
 ```
 
