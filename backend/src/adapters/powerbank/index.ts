@@ -52,7 +52,7 @@ export function normalizeProduct(sourceProduct: unknown): NormalizedProduct {
     stock,
     unit: 'pcs',
     status: getStockStatus(stock),
-    image_url: asString(product.image),
+    image_url: asString(product.image ?? product.imageUrl),
     updated_at: asString(product.updatedAt, new Date().toISOString()),
   };
 }
@@ -62,9 +62,16 @@ function extractProductList(payload: unknown): unknown[] {
     return payload;
   }
 
-  const data = (payload as Record<string, unknown> | null)?.data;
+  const envelope = payload as Record<string, unknown> | null;
+  const data = envelope?.data;
 
-  return Array.isArray(data) ? data : [];
+  if (Array.isArray(data)) {
+    return data;
+  }
+
+  const products = envelope?.products;
+
+  return Array.isArray(products) ? products : [];
 }
 
 export const powerbankAdapter: ProductAdapter = {
