@@ -5,6 +5,9 @@ import ProductDetail from './components/ProductDetail';
 import CartDrawer from './components/CartDrawer';
 import Checkout from './components/Checkout';
 import OrderHistory from './components/OrderHistory';
+import AccountMenu from './components/AccountMenu';
+import AuthDialog from './components/AuthDialog';
+import { useAuth } from './auth/AuthContext';
 import { useCart } from './cart/CartContext';
 import { textValue } from './utils/product';
 
@@ -33,6 +36,7 @@ function readFavorites(): FavoriteState {
 
 function App() {
   const cart = useCart();
+  const auth = useAuth();
   const [favorites, setFavorites] = useState<FavoriteState>(readFavorites);
   useEffect(() => {
     try { sessionStorage.setItem('moodeng-shopping', JSON.stringify(favorites)); } catch { /* Favorites remain usable in memory. */ }
@@ -152,7 +156,7 @@ function App() {
       <header className="site-header">
         <a className="brand" href="#home"><span className="brand-symbol">m.</span><span>Moodeng<span className="brand-subtitle">MULTISTORE</span></span></a>
         <nav className="desktop-nav" aria-label="Main navigation"><a href="#home">Home</a><a href="#explore">Explore</a><a href="#businesses">Businesses</a><button onClick={() => openOrders()}>Orders</button></nav>
-        <div className="header-actions"><a href="#search">Search <span aria-hidden="true">⌕</span></a><a className="inventory-link" href="#inventory">Inventory <span>{loading || error ? '—' : summary.total}</span></a><button className="header-cart" onClick={cart.openCart} aria-label={`Open cart with ${cart.itemCount} items`}>Cart <span>{cart.itemCount}</span></button></div>
+        <div className="header-actions"><a href="#search">Search <span aria-hidden="true">⌕</span></a><a className="inventory-link" href="#inventory">Inventory <span>{loading || error ? '—' : summary.total}</span></a><button className="header-cart" onClick={cart.openCart} aria-label={`Open cart with ${cart.itemCount} items`}>Cart <span>{cart.itemCount}</span></button><AccountMenu /></div>
       </header>
       <main className="page-shell">
         <section className="hero" aria-labelledby="hero-title">
@@ -193,6 +197,7 @@ function App() {
         onViewOrder={openOrders} />}
       {ordersOpen && <OrderHistory key={selectedOrderNo || 'history'} initialOrderNo={selectedOrderNo}
         onClose={() => { setOrdersOpen(false); setSelectedOrderNo(undefined); }} />}
+      {auth.isAuthOpen && <AuthDialog onClose={auth.closeAuth} />}
     </div>
   );
 }

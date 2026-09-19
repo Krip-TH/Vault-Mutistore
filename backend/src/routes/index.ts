@@ -1,8 +1,11 @@
 import { Router } from 'express';
 import { getBusinesses, getHealth, getProducts, getStockSummary } from '../controllers/apiController.js';
+import { getMe, postLogin, postLogout, postRegister } from '../controllers/authController.js';
 import { getOrderByNumber, getOrders, postOrder } from '../controllers/orderController.js';
+import { attachUser } from '../middleware/auth.js';
 
 const router = Router();
+router.use(attachUser);
 router.get('/health', getHealth);
 router.get('/products', getProducts);
 router.get('/businesses', getBusinesses);
@@ -10,4 +13,8 @@ router.get('/stock/summary', getStockSummary);
 router.post('/orders', postOrder);
 router.get('/orders', getOrders);
 router.get('/orders/:orderNo', getOrderByNumber);
+router.post('/auth/register', postRegister);
+router.post('/auth/login', postLogin);
+router.post('/auth/logout', postLogout);
+router.get('/auth/me', getMe);
 export default router;
