@@ -19,6 +19,10 @@ export interface Product {
   unit: string;
   status: StockStatus;
   image_url: string;
+  images?: string[];
+  images_360?: string[];
+  view_360?: string[];
+  description?: string;
   updated_at: string;
 }
 
