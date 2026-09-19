@@ -5,30 +5,94 @@ import type { ProductAdapter } from '../types.js';
 export const business = 'powerbank' as const;
 export const businessName = 'Powerbank';
 
+const DEFAULT_API_URL = 'http://localhost:4000/api/powerbank';
+const REQUEST_TIMEOUT_MS = 10_000;
+
+function asRecord(value: unknown): Record<string, unknown> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return {};
+  }
+
+  return value as Record<string, unknown>;
+}
+
+function asNumber(value: unknown): number {
+  const parsed = Number(value);
+
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function asString(value: unknown, fallback = ''): string {
+  if (value === null || value === undefined) {
+    return fallback;
+  }
+
+  const text = String(value);
+
+  return text === '' ? fallback : text;
+}
+
+/**
+ * The Powerbank Stock Product API (powerbank-api/) returns products shaped
+ * like: { id: string, name: string, brand: string, price: number,
+ * stock: number, description: string, image: string, category: "Powerbank",
+ * createdAt: string, updatedAt: string }.
+ */
 export function normalizeProduct(sourceProduct: unknown): NormalizedProduct {
-  const product = sourceProduct as Record<string, unknown>;
-  const stock = Number(product.quantity_available ?? 0);
+  const product = asRecord(sourceProduct);
+  const stock = asNumber(product.stock);
 
   return {
-    id: String(product.sku ?? ''),
+    id: asString(product.id),
     business,
     business_name: businessName,
-    name: String(product.title ?? ''),
-    category: String(product.product_type ?? 'Powerbank'),
-    price: Number(product.unit_price ?? 0),
+    name: asString(product.name),
+    category: asString(product.category, 'Powerbank'),
+    price: asNumber(product.price),
     stock,
-    unit: String(product.stock_unit ?? 'pcs'),
+    unit: 'pcs',
     status: getStockStatus(stock),
-    image_url: String(product.image ?? ''),
-    updated_at: String(product.last_modified ?? new Date().toISOString()),
+    image_url: asString(product.image ?? product.imageUrl),
+    updated_at: asString(product.updatedAt, new Date().toISOString()),
   };
 }
 
+function extractProductList(payload: unknown): unknown[] {
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+
+  const envelope = payload as Record<string, unknown> | null;
+  const data = envelope?.data;
+
+  if (Array.isArray(data)) {
+    return data;
+  }
+
+  const products = envelope?.products;
+
+  return Array.isArray(products) ? products : [];
+}
+
 export const powerbankAdapter: ProductAdapter = {
-  async getProducts() {
-    // TODO: Request the real Powerbank API using POWERBANK_API_URL.
-    // Example: const response = await fetch(`${process.env.POWERBANK_API_URL}/products`);
-    // Normalize each product from the API response with normalizeProduct().
-    return [];
+  async getProducts(): Promise<NormalizedProduct[]> {
+    const url = process.env.POWERBANK_API_URL || DEFAULT_API_URL;
+
+    try {
+      const response = await fetch(url, {
+        headers: { Accept: 'application/json' },
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Powerbank API responded with ${response.status} ${response.statusText}`);
+      }
+
+      return extractProductList(await response.json()).map(normalizeProduct);
+    } catch (error) {
+      // Report this business failure while allowing aggregation to continue.
+      console.error(`[powerbank] Product request failed (${url}):`, error);
+      return [];
+    }
   },
 };

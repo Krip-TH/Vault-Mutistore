@@ -25,6 +25,12 @@ services:
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      DOOR_API_URL: ${DOOR_API_URL}
+      BRANDNAME_API_URL: ${BRANDNAME_API_URL}
+      PLUG_API_URL: ${PLUG_API_URL}
+      CLOTHING_API_URL: ${CLOTHING_API_URL}
+      POWERBANK_API_URL: ${POWERBANK_API_URL}
+      PROJECTOR_API_URL: ${PROJECTOR_API_URL}
     volumes:
       - ./backend:/app
       - backend_node_modules:/app/node_modules
