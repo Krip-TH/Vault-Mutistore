@@ -10,3 +10,50 @@
 }
 
 body { margin: 0; min-width: 320px; min-height: 100vh; }
+
+body {
+  background: #020617;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+.filter-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #94a3b8;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.filter-control {
+  width: 100%;
+  border: 1px solid #334155;
+  border-radius: 0.625rem;
+  background: #0f172a;
+  padding: 0.7rem 0.8rem;
+  color: #f8fafc;
+  outline: none;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.filter-control::placeholder {
+  color: #64748b;
+}
+
+.filter-control:focus {
+  border-color: #22d3ee;
+  box-shadow: 0 0 0 3px rgb(34 211 238 / 0.12);
+}
+
+.product-title {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
