@@ -69,7 +69,7 @@ Moodeng-MultiStore/
 - Docker Desktop (with Docker Compose)
 - Git
 
-For development without Docker, install Node.js 20 or newer and npm. MySQL 8 is also required if database access is added locally.
+For development without Docker, install Node.js 20 or newer, npm, and MySQL 8.
 
 ## Quick start with Docker
 
@@ -90,6 +90,8 @@ Open:
 
 Run `docker compose down` to stop the services. The named MySQL volume preserves data between restarts.
 
+`database/init.sql` runs automatically only when MySQL initializes a new empty volume. For an existing development volume, apply `database/migrations/001_orders.sql` once through MySQL or phpMyAdmin before using checkout.
+
 ## Local development
 
 Run `npm install` and `npm run dev` separately in `frontend` and `backend`. Copy `.env.example` to `.env` before connecting to the Compose database. During local development, the frontend proxies `/api` requests to `http://localhost:3000`.
@@ -99,9 +101,12 @@ Run `npm install` and `npm run dev` separately in `frontend` and `backend`. Copy
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
 | GET | `/api/health` | Backend health check |
-| GET | `/api/products` | Normalized products (mock data for now) |
+| GET | `/api/products` | Live normalized products from configured business adapters |
 | GET | `/api/businesses` | Supported businesses (mock data for now) |
 | GET | `/api/stock/summary` | Stock overview (mock data for now) |
+| POST | `/api/orders` | Validate live inventory and create an order |
+| GET | `/api/orders` | List the 100 newest saved orders |
+| GET | `/api/orders/:orderNo` | Retrieve a saved order by public order number |
 
 ## Team development workflow
 
