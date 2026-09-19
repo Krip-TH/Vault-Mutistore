@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { BusinessType, Product, ProductsResponse, StockStatus } from './types/product';
-import { ProductCard, ProductDetail, ProductImage } from './components/ProductPresentation';
+import { ProductCard, ProductImage } from './components/ProductPresentation';
+import ProductDetail from './components/ProductDetail';
+import { cartCount, purchaseState, textValue } from './utils/product';
 
 const businessOptions: Array<{ value: BusinessType; label: string }> = [
   { value: 'door', label: 'Door' },
@@ -13,8 +15,24 @@ const businessOptions: Array<{ value: BusinessType; label: string }> = [
 
 const stockStatuses: StockStatus[] = ['In Stock', 'Low Stock', 'Out of Stock'];
 
+type ShoppingState = { bag: Record<string, number>; favorites: string[] };
+const productKey = (product: Product) => JSON.stringify([product.business, product.id]);
+function readShopping(): ShoppingState {
+  try {
+    const value = JSON.parse(sessionStorage.getItem('moodeng-shopping') || '{}');
+    return {
+      bag: Object.fromEntries(Object.entries(value.bag ?? {}).filter((entry): entry is [string, number] => typeof entry[1] === 'number' && Number.isSafeInteger(entry[1]) && entry[1] > 0)),
+      favorites: Array.isArray(value.favorites) ? value.favorites.filter((key: unknown) => typeof key === 'string') : [],
+    };
+  } catch { return { bag: {}, favorites: [] }; }
+}
+
 
 function App() {
+  const [shopping, setShopping] = useState<ShoppingState>(readShopping);
+  useEffect(() => {
+    try { sessionStorage.setItem('moodeng-shopping', JSON.stringify(shopping)); } catch { /* Shopping remains usable when storage is unavailable. */ }
+  }, [shopping]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -68,7 +86,7 @@ function App() {
   }, [requestVersion]);
 
   const categories = useMemo(
-    () => [...new Set(products.map((product) => product.category).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
+    () => [...new Set(products.map((product) => textValue(product.category)).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
     [products],
   );
 
@@ -76,9 +94,9 @@ function App() {
     const normalizedSearch = search.trim().toLocaleLowerCase();
 
     return products.filter((product) => {
-      const matchesSearch = !normalizedSearch || product.name.toLocaleLowerCase().includes(normalizedSearch);
+      const matchesSearch = !normalizedSearch || textValue(product.name).toLocaleLowerCase().includes(normalizedSearch);
       const matchesBusiness = business === 'all' || product.business === business;
-      const matchesCategory = category === 'all' || product.category === category;
+      const matchesCategory = category === 'all' || textValue(product.category) === category;
       const matchesStock = stockStatus === 'all' || product.status === stockStatus;
 
       return matchesSearch && matchesBusiness && matchesCategory && matchesStock;
@@ -106,7 +124,10 @@ function App() {
   }
 
 
-  const [selected, setSelected] = useState<Product | null>(null);
+  const [selection, setSelected] = useState<Product | null>(null);
+  const currentSelection = selection ? products.find(product => productKey(product) === productKey(selection)) : undefined;
+  const selected = currentSelection ?? selection;
+  const inventoryAvailable = !loading && !error && !!currentSelection;
   const featured = products.find(product => product.image_url && product.stock > 0);
   const missing = businessOptions.filter(option => !products.some(product => product.business === option.value));
   return (
@@ -146,7 +167,23 @@ function App() {
         <footer className="site-footer"><a className="footer-brand" href="#home">Moodeng MultiStore</a><p>Six independent businesses. One shared perspective.</p><a href="#home">Back to top ↑</a></footer>
       </main>
       <nav className="mobile-nav" aria-label="Mobile navigation"><a href="#home">Home</a><a href="#explore">Explore</a><a href="#businesses">Businesses</a><a href="#inventory">Inventory</a></nav>
-      {selected && <ProductDetail product={selected} onClose={() => setSelected(null)} />}
+      {selected && <ProductDetail key={productKey(selected)} product={selected} onClose={() => setSelected(null)}
+        inventoryAvailable={inventoryAvailable}
+        bagQuantity={shopping.bag[productKey(selected)] ?? 0}
+        bagCount={cartCount(shopping.bag)}
+        favorite={shopping.favorites.includes(productKey(selected))}
+        onFavorite={() => setShopping(current => ({ ...current, favorites: current.favorites.includes(productKey(selected)) ? current.favorites.filter(key => key !== productKey(selected)) : [...current.favorites, productKey(selected)] }))}
+        onBagChange={quantity => setShopping(current => {
+          const key = productKey(selected);
+          if (quantity === 0) {
+            const bag = { ...current.bag };
+            delete bag[key];
+            return { ...current, bag };
+          }
+          const purchase = purchaseState(selected, current.bag[key] ?? 0, quantity, inventoryAvailable);
+          if (!purchase.canAdd || !Number.isSafeInteger(quantity) || quantity < 1) return current;
+          return { ...current, bag: { ...current.bag, [key]: Math.min(quantity, purchase.stock) } };
+        })} />}
     </div>
   );
 }
