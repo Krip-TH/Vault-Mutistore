@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useCart } from '../cart/CartContext';
 import type { CartItem as CartItemType } from '../types/cart';
 import GalleryImage from './GalleryImage';
@@ -6,10 +6,9 @@ import { StockBadge } from './ProductPresentation';
 
 const price = new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' });
 
-export default function CartDrawer({ onExplore }: { onExplore: () => void }) {
+export default function CartDrawer({ onExplore, onCheckout }: { onExplore: () => void; onCheckout: () => void }) {
   const cart = useCart();
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const [checkoutMessage, setCheckoutMessage] = useState('');
   const groups = useMemo(() => {
     const grouped = new Map<string, CartItemType[]>();
     for (const item of cart.items) {
@@ -25,7 +24,6 @@ export default function CartDrawer({ onExplore }: { onExplore: () => void }) {
     const previousOverflow = document.body.style.overflow;
     dialog.showModal();
     document.body.style.overflow = 'hidden';
-    setCheckoutMessage('');
     return () => {
       dialog.close();
       document.body.style.overflow = previousOverflow;
@@ -57,8 +55,7 @@ export default function CartDrawer({ onExplore }: { onExplore: () => void }) {
           <p>Shipping, discounts and tax are calculated at checkout.</p>
           {cart.hasUnavailableItems && <p className="cart-warning" role="status">Remove unavailable products before checkout.</p>}
           <button className="primary-button cart-checkout" disabled={cart.hasUnavailableItems}
-            onClick={() => setCheckoutMessage('Checkout will be available in the next step. Your cart is saved.')}>Proceed to checkout <span aria-hidden="true">↗</span></button>
-          {checkoutMessage && <p className="checkout-message" role="status">{checkoutMessage}</p>}
+            onClick={() => { cart.closeCart(); onCheckout(); }}>Proceed to checkout <span aria-hidden="true">↗</span></button>
         </footer>
       </>}
     </div>

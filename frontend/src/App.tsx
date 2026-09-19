@@ -3,6 +3,8 @@ import type { BusinessType, Product, ProductsResponse, StockStatus } from './typ
 import { ProductCard, ProductImage } from './components/ProductPresentation';
 import ProductDetail from './components/ProductDetail';
 import CartDrawer from './components/CartDrawer';
+import Checkout from './components/Checkout';
+import OrderHistory from './components/OrderHistory';
 import { useCart } from './cart/CartContext';
 import { textValue } from './utils/product';
 
@@ -43,6 +45,9 @@ function App() {
   const [business, setBusiness] = useState<BusinessType | 'all'>('all');
   const [category, setCategory] = useState('all');
   const [stockStatus, setStockStatus] = useState<StockStatus | 'all'>('all');
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [ordersOpen, setOrdersOpen] = useState(false);
+  const [selectedOrderNo, setSelectedOrderNo] = useState<string | undefined>();
 
   useEffect(() => {
     const controller = new AbortController();
@@ -128,6 +133,12 @@ function App() {
     setStockStatus('all');
   }
 
+  function openOrders(orderNo?: string) {
+    setCheckoutOpen(false);
+    setSelectedOrderNo(orderNo);
+    setOrdersOpen(true);
+  }
+
 
   const [selection, setSelected] = useState<Product | null>(null);
   const currentSelection = selection ? products.find(product => productKey(product) === productKey(selection)) : undefined;
@@ -140,7 +151,7 @@ function App() {
       <a className="skip-link" href="#explore">Skip to products</a>
       <header className="site-header">
         <a className="brand" href="#home"><span className="brand-symbol">m.</span><span>Moodeng<span className="brand-subtitle">MULTISTORE</span></span></a>
-        <nav className="desktop-nav" aria-label="Main navigation"><a href="#home">Home</a><a href="#explore">Explore</a><a href="#businesses">Businesses</a></nav>
+        <nav className="desktop-nav" aria-label="Main navigation"><a href="#home">Home</a><a href="#explore">Explore</a><a href="#businesses">Businesses</a><button onClick={() => openOrders()}>Orders</button></nav>
         <div className="header-actions"><a href="#search">Search <span aria-hidden="true">⌕</span></a><a className="inventory-link" href="#inventory">Inventory <span>{loading || error ? '—' : summary.total}</span></a><button className="header-cart" onClick={cart.openCart} aria-label={`Open cart with ${cart.itemCount} items`}>Cart <span>{cart.itemCount}</span></button></div>
       </header>
       <main className="page-shell">
@@ -171,12 +182,17 @@ function App() {
         </section>
         <footer className="site-footer"><a className="footer-brand" href="#home">Moodeng MultiStore</a><p>Six independent businesses. One shared perspective.</p><a href="#home">Back to top ↑</a></footer>
       </main>
-      <nav className="mobile-nav" aria-label="Mobile navigation"><a href="#home">Home</a><a href="#explore">Explore</a><a href="#businesses">Businesses</a><button onClick={cart.openCart}>Cart <span>{cart.itemCount}</span></button></nav>
+      <nav className="mobile-nav" aria-label="Mobile navigation"><a href="#home">Home</a><a href="#explore">Explore</a><button onClick={() => openOrders()}>Orders</button><button onClick={cart.openCart}>Cart <span>{cart.itemCount}</span></button></nav>
       {selected && <ProductDetail key={productKey(selected)} product={selected} onClose={() => setSelected(null)}
         inventoryAvailable={inventoryAvailable}
         favorite={favorites.favorites.includes(productKey(selected))}
         onFavorite={() => setFavorites(current => ({ favorites: current.favorites.includes(productKey(selected)) ? current.favorites.filter(key => key !== productKey(selected)) : [...current.favorites, productKey(selected)] }))} />}
-      <CartDrawer onExplore={() => document.querySelector('#explore')?.scrollIntoView({ behavior: 'smooth' })} />
+      <CartDrawer onExplore={() => document.querySelector('#explore')?.scrollIntoView({ behavior: 'smooth' })} onCheckout={() => setCheckoutOpen(true)} />
+      {checkoutOpen && <Checkout onClose={() => setCheckoutOpen(false)}
+        onContinue={() => document.querySelector('#explore')?.scrollIntoView({ behavior: 'smooth' })}
+        onViewOrder={openOrders} />}
+      {ordersOpen && <OrderHistory key={selectedOrderNo || 'history'} initialOrderNo={selectedOrderNo}
+        onClose={() => { setOrdersOpen(false); setSelectedOrderNo(undefined); }} />}
     </div>
   );
 }

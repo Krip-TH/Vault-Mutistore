@@ -16,6 +16,7 @@ interface CartContextValue extends CartSummary {
   quantityFor: (product: Pick<Product, 'business' | 'id'>) => number;
   setQuantity: (key: string, quantity: number) => void;
   removeItem: (key: string) => void;
+  clearCart: () => void;
   syncProducts: (products: Product[]) => void;
 }
 
@@ -42,6 +43,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const setQuantity = useCallback((key: string, quantity: number) =>
     setItems(current => setCartItemQuantity(current, key, quantity)), []);
   const removeItem = useCallback((key: string) => setItems(current => removeCartItem(current, key)), []);
+  const clearCart = useCallback(() => setItems([]), []);
   const syncProducts = useCallback((products: Product[]) =>
     setItems(current => syncCartProducts(current, products)), []);
   const quantityFor = useCallback((product: Pick<Product, 'business' | 'id'>) =>
@@ -56,8 +58,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
     quantityFor,
     setQuantity,
     removeItem,
+    clearCart,
     syncProducts,
-  }), [addProduct, closeCart, isOpen, items, openCart, quantityFor, removeItem, setQuantity, syncProducts]);
+  }), [addProduct, clearCart, closeCart, isOpen, items, openCart, quantityFor, removeItem, setQuantity, syncProducts]);
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
 
