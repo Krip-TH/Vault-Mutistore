@@ -12,15 +12,10 @@ export function hasNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0;
 }
 
-export function cartCount(items: Record<string, number>): number {
-  return Object.values(items).reduce((total, quantity) =>
-    total + (Number.isSafeInteger(quantity) && quantity > 0 ? quantity : 0), 0);
-}
-
-export function purchaseState(product: Product, bagQuantity: number, quantity: number, inventoryAvailable = true) {
+export function purchaseState(product: Product, cartQuantity: number, quantity: number, inventoryAvailable = true) {
   const stock = hasNumber(product.stock) ? Math.floor(product.stock) : 0;
-  const bag = Number.isSafeInteger(bagQuantity) && bagQuantity > 0 ? bagQuantity : 0;
-  const remaining = Math.max(0, stock - bag);
+  const inCart = Number.isSafeInteger(cartQuantity) && cartQuantity > 0 ? cartQuantity : 0;
+  const remaining = Math.max(0, stock - inCart);
   const canAdd = inventoryAvailable && hasNumber(product.price) && product.status !== 'Out of Stock' && remaining > 0;
   return {
     stock,

@@ -1,29 +1,30 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Product } from '../types/product';
 import { hasNumber, purchaseState, textValue } from '../utils/product';
+import { useCart } from '../cart/CartContext';
+import { cartKey } from '../cart/cartState';
 import ProductGallery from './ProductGallery';
 import { StockBadge } from './ProductPresentation';
 
 interface Props {
   product: Product;
   onClose: () => void;
-  bagQuantity: number;
-  bagCount: number;
   favorite: boolean;
   onFavorite: () => void;
-  onBagChange: (quantity: number) => void;
   inventoryAvailable?: boolean;
 }
 
 const price = new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' });
 
-export default function ProductDetail({ product, onClose, bagQuantity, bagCount, favorite, onFavorite, onBagChange, inventoryAvailable = true }: Props) {
+export default function ProductDetail({ product, onClose, favorite, onFavorite, inventoryAvailable = true }: Props) {
+  const cart = useCart();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const addedTimerRef = useRef<number>();
   const [quantity, setQuantity] = useState(1);
   const [message, setMessage] = useState('');
   const [added, setAdded] = useState(false);
-  const purchase = purchaseState(product, bagQuantity, quantity, inventoryAvailable);
+  const cartQuantity = cart.quantityFor(product);
+  const purchase = purchaseState(product, cartQuantity, quantity, inventoryAvailable);
   const name = textValue(product.name) || 'Product';
   const business = textValue(product.business_name);
   const category = textValue(product.category);
@@ -59,8 +60,9 @@ export default function ProductDetail({ product, onClose, bagQuantity, bagCount,
 
   function addToCart() {
     if (!purchase.canAdd) return;
-    onBagChange(bagQuantity + purchase.quantity);
-    setMessage(`${purchase.quantity}${unit ? ` ${unit}` : ''} added to your cart.`);
+    const addedQuantity = cart.addProduct(product, purchase.quantity);
+    if (!addedQuantity) return;
+    setMessage(`${addedQuantity}${unit ? ` ${unit}` : ''} added to your cart.`);
     setAdded(true);
     if (addedTimerRef.current !== undefined) window.clearTimeout(addedTimerRef.current);
     addedTimerRef.current = window.setTimeout(() => {
@@ -74,7 +76,7 @@ export default function ProductDetail({ product, onClose, bagQuantity, bagCount,
     onClick={event => { if (event.target === event.currentTarget) onClose(); }}>
     <div className="detail-topbar">
       <button className="back-to-collection" onClick={onClose} autoFocus><span aria-hidden="true">←</span> Back to collection</button>
-      <span className="detail-bag-count">Cart / {bagCount}</span>
+      <button className="detail-bag-count" onClick={cart.openCart} aria-label={`Open cart with ${cart.itemCount} items`}>Cart / {cart.itemCount}</button>
       <button className="dialog-close" onClick={onClose} aria-label="Close product details">×</button>
     </div>
     <div className="detail-layout">
@@ -87,7 +89,7 @@ export default function ProductDetail({ product, onClose, bagQuantity, bagCount,
         {description && <p className="detail-description">{description}</p>}
         <div className="purchase-panel">
           {!inventoryAvailable && <p className="detail-availability" role="status">Current inventory is unavailable. Return to the collection and refresh to check again.</p>}
-          {bagQuantity > purchase.stock && knownStock && <p className="detail-availability" role="status">Your cart exceeds the latest available stock. Remove this item to choose a new quantity.</p>}
+          {cartQuantity > purchase.stock && knownStock && <p className="detail-availability" role="status">Your cart exceeds the latest available stock. Remove this item to choose a new quantity.</p>}
           <div className="quantity-row">
             <span id="quantity-label">Quantity</span>
             <div className="quantity-control" role="group" aria-labelledby="quantity-label">
@@ -106,9 +108,9 @@ export default function ProductDetail({ product, onClose, bagQuantity, bagCount,
             {favorite ? 'Saved for later' : 'Save for later'}
           </button>
           {message && <p className="bag-feedback" role="status">{message}</p>}
-          {bagQuantity > 0 && <div className="bag-line">
-            <span>In your cart: {bagQuantity}{knownPrice ? ` · ${price.format(product.price * bagQuantity)}` : ''}</span>
-            <button className="text-button" onClick={() => { onBagChange(0); setMessage('Removed from your cart.'); }}>Remove</button>
+          {cartQuantity > 0 && <div className="bag-line">
+            <span>In your cart: {cartQuantity}{knownPrice ? ` · ${price.format(product.price * cartQuantity)}` : ''}</span>
+            <button className="text-button" onClick={() => { cart.removeItem(cartKey(product)); setMessage('Removed from your cart.'); }}>Remove</button>
           </div>}
           <p className="detail-note">Your cart is saved for this browser session. Adding items does not reserve stock.</p>
         </div>

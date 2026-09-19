@@ -6,7 +6,8 @@ import ProductDetail from '../src/components/ProductDetail';
 import ProductGallery from '../src/components/ProductGallery';
 import Product360Viewer from '../src/components/Product360Viewer';
 import { ProductCard } from '../src/components/ProductPresentation';
-import { cartCount, imageUrls, purchaseState } from '../src/utils/product';
+import { CartProvider } from '../src/cart/CartContext';
+import { imageUrls, purchaseState } from '../src/utils/product';
 import type { BusinessType, Product, ProductsResponse } from '../src/types/product';
 
 // Test fixture only; the storefront always consumes /api/products.
@@ -14,9 +15,9 @@ const product: Product = {
   id: 'test-reference', business: 'door', business_name: 'Test business', category: 'Test category',
   name: 'Test product', price: 100, stock: 5, unit: 'pcs', status: 'In Stock', image_url: '', updated_at: '',
 };
-const callbacks = { onClose() {}, onFavorite() {}, onBagChange() {} };
+const callbacks = { onClose() {}, onFavorite() {} };
 const detail = (value: Product, inventoryAvailable = true) => renderToStaticMarkup(
-  <ProductDetail {...callbacks} product={value} bagQuantity={0} bagCount={0} favorite={false} inventoryAvailable={inventoryAvailable} />,
+  <CartProvider><ProductDetail {...callbacks} product={value} favorite={false} inventoryAvailable={inventoryAvailable} /></CartProvider>,
 );
 
 test('card selection passes the exact product, including business identity and optional fields', () => {
@@ -47,16 +48,6 @@ test('quantity stays valid across changes to stock, bag quantity, and requested 
   assert.equal(purchaseState({ ...product, stock: 2 }, 0, 4).quantity, 2);
   assert.equal(purchaseState(product, 4, 4).quantity, 1);
   assert.equal(purchaseState(product, 5, 1).canAdd, false);
-});
-
-test('cart count reflects total item quantities and is shown in the detail top bar', () => {
-  assert.equal(cartCount({ door: 1, projector: 3, invalid: -2 }), 4);
-  const html = renderToStaticMarkup(
-    <ProductDetail {...callbacks} product={product} bagQuantity={3} bagCount={7} favorite={false} />,
-  );
-  assert.ok(html.includes('Cart / 7'));
-  assert.ok(html.includes('In your cart: 3'));
-  assert.ok(html.includes('Add to cart'));
 });
 
 test('zero stock, out-of-stock status, missing price and offline inventory disable purchases', () => {

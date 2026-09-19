@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import type { BusinessType, Product, ProductsResponse, StockStatus } from './types/product';
 import { ProductCard, ProductImage } from './components/ProductPresentation';
 import ProductDetail from './components/ProductDetail';
-import { cartCount, purchaseState, textValue } from './utils/product';
+import CartDrawer from './components/CartDrawer';
+import { useCart } from './cart/CartContext';
+import { textValue } from './utils/product';
 
 const businessOptions: Array<{ value: BusinessType; label: string }> = [
   { value: 'door', label: 'Door' },
@@ -15,24 +17,24 @@ const businessOptions: Array<{ value: BusinessType; label: string }> = [
 
 const stockStatuses: StockStatus[] = ['In Stock', 'Low Stock', 'Out of Stock'];
 
-type ShoppingState = { bag: Record<string, number>; favorites: string[] };
+type FavoriteState = { favorites: string[] };
 const productKey = (product: Product) => JSON.stringify([product.business, product.id]);
-function readShopping(): ShoppingState {
+function readFavorites(): FavoriteState {
   try {
     const value = JSON.parse(sessionStorage.getItem('moodeng-shopping') || '{}');
     return {
-      bag: Object.fromEntries(Object.entries(value.bag ?? {}).filter((entry): entry is [string, number] => typeof entry[1] === 'number' && Number.isSafeInteger(entry[1]) && entry[1] > 0)),
       favorites: Array.isArray(value.favorites) ? value.favorites.filter((key: unknown) => typeof key === 'string') : [],
     };
-  } catch { return { bag: {}, favorites: [] }; }
+  } catch { return { favorites: [] }; }
 }
 
 
 function App() {
-  const [shopping, setShopping] = useState<ShoppingState>(readShopping);
+  const cart = useCart();
+  const [favorites, setFavorites] = useState<FavoriteState>(readFavorites);
   useEffect(() => {
-    try { sessionStorage.setItem('moodeng-shopping', JSON.stringify(shopping)); } catch { /* Shopping remains usable when storage is unavailable. */ }
-  }, [shopping]);
+    try { sessionStorage.setItem('moodeng-shopping', JSON.stringify(favorites)); } catch { /* Favorites remain usable in memory. */ }
+  }, [favorites]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -84,6 +86,9 @@ function App() {
 
     return () => controller.abort();
   }, [requestVersion]);
+  useEffect(() => {
+    if (!loading && !error) cart.syncProducts(products);
+  }, [cart.syncProducts, error, loading, products]);
 
   const categories = useMemo(
     () => [...new Set(products.map((product) => textValue(product.category)).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
@@ -136,7 +141,7 @@ function App() {
       <header className="site-header">
         <a className="brand" href="#home"><span className="brand-symbol">m.</span><span>Moodeng<span className="brand-subtitle">MULTISTORE</span></span></a>
         <nav className="desktop-nav" aria-label="Main navigation"><a href="#home">Home</a><a href="#explore">Explore</a><a href="#businesses">Businesses</a></nav>
-        <div className="header-actions"><a href="#search">Search <span aria-hidden="true">⌕</span></a><a className="inventory-link" href="#inventory">Inventory <span>{loading || error ? '—' : summary.total}</span></a></div>
+        <div className="header-actions"><a href="#search">Search <span aria-hidden="true">⌕</span></a><a className="inventory-link" href="#inventory">Inventory <span>{loading || error ? '—' : summary.total}</span></a><button className="header-cart" onClick={cart.openCart} aria-label={`Open cart with ${cart.itemCount} items`}>Cart <span>{cart.itemCount}</span></button></div>
       </header>
       <main className="page-shell">
         <section className="hero" aria-labelledby="hero-title">
@@ -166,24 +171,12 @@ function App() {
         </section>
         <footer className="site-footer"><a className="footer-brand" href="#home">Moodeng MultiStore</a><p>Six independent businesses. One shared perspective.</p><a href="#home">Back to top ↑</a></footer>
       </main>
-      <nav className="mobile-nav" aria-label="Mobile navigation"><a href="#home">Home</a><a href="#explore">Explore</a><a href="#businesses">Businesses</a><a href="#inventory">Inventory</a></nav>
+      <nav className="mobile-nav" aria-label="Mobile navigation"><a href="#home">Home</a><a href="#explore">Explore</a><a href="#businesses">Businesses</a><button onClick={cart.openCart}>Cart <span>{cart.itemCount}</span></button></nav>
       {selected && <ProductDetail key={productKey(selected)} product={selected} onClose={() => setSelected(null)}
         inventoryAvailable={inventoryAvailable}
-        bagQuantity={shopping.bag[productKey(selected)] ?? 0}
-        bagCount={cartCount(shopping.bag)}
-        favorite={shopping.favorites.includes(productKey(selected))}
-        onFavorite={() => setShopping(current => ({ ...current, favorites: current.favorites.includes(productKey(selected)) ? current.favorites.filter(key => key !== productKey(selected)) : [...current.favorites, productKey(selected)] }))}
-        onBagChange={quantity => setShopping(current => {
-          const key = productKey(selected);
-          if (quantity === 0) {
-            const bag = { ...current.bag };
-            delete bag[key];
-            return { ...current, bag };
-          }
-          const purchase = purchaseState(selected, current.bag[key] ?? 0, quantity, inventoryAvailable);
-          if (!purchase.canAdd || !Number.isSafeInteger(quantity) || quantity < 1) return current;
-          return { ...current, bag: { ...current.bag, [key]: Math.min(quantity, purchase.stock) } };
-        })} />}
+        favorite={favorites.favorites.includes(productKey(selected))}
+        onFavorite={() => setFavorites(current => ({ favorites: current.favorites.includes(productKey(selected)) ? current.favorites.filter(key => key !== productKey(selected)) : [...current.favorites, productKey(selected)] }))} />}
+      <CartDrawer onExplore={() => document.querySelector('#explore')?.scrollIntoView({ behavior: 'smooth' })} />
     </div>
   );
 }
