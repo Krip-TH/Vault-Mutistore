@@ -1,6 +1,6 @@
-# Moodeng MultiStore
+# VAULT — Multi-Store Marketplace Application
 
-Moodeng MultiStore is a central stock-management web application for a university Internet Programming group project. It will collect product stock data from six independently developed business APIs, normalize that data, and present it through one shared application.
+VAULT — Multi-Store Marketplace Application is a central stock-management web application for a university Internet Programming group project. It will collect product stock data from six independently developed business APIs, normalize that data, and present it through one shared application.
 
 This repository currently provides the shared infrastructure only. Real external API integrations are intentionally left for each team member's feature work.
 
@@ -54,7 +54,7 @@ See the [API contract](docs/API_CONTRACT.md) for the normalized fields and mappi
 ## Project structure
 
 ```text
-Moodeng-MultiStore/
+VAULT/
 |-- frontend/            React application
 |-- backend/             Express REST API and future adapters
 |-- database/init.sql    MySQL schema and seed data

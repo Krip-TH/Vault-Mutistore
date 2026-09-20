@@ -1,6 +1,6 @@
-# Moodeng MultiStore API Contract
+# VAULT — Multi-Store Marketplace Application API Contract
 
-This contract defines the product format used inside Moodeng MultiStore. A member's external API does **not** need to use these field names. Each business adapter converts its source data before the backend or frontend uses it.
+This contract defines the product format used inside VAULT — Multi-Store Marketplace Application. A member's external API does **not** need to use these field names. Each business adapter converts its source data before the backend or frontend uses it.
 
 ```text
 External Member API
@@ -9,7 +9,7 @@ Business Adapter
         ↓
 Normalized Product
         ↓
-Moodeng MultiStore Backend
+VAULT — Multi-Store Marketplace Application Backend
 ```
 
 ## Official normalized product format
@@ -182,7 +182,7 @@ The adapter must handle the source API's actual response shape. Each member's AP
 - Provide a product name.
 - Provide a price that is numeric or convertible to a number.
 - Provide a stock quantity that is numeric or convertible to a number.
-- Be reachable by the Moodeng MultiStore backend.
+- Be reachable by the VAULT — Multi-Store Marketplace Application backend.
 - Have its API URL shared with the group.
 - Keep secret passwords, tokens, and database credentials out of GitHub.
 
