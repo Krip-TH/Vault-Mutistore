@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 
-export default function AccountMenu({ onAdmin }: { onAdmin: () => void }) {
-  const { user, loading, openLogin, logout } = useAuth();
+export default function AccountMenu({ onOrders, onAdmin, onLogout }: { onOrders: () => void; onAdmin: () => void; onLogout: () => void }) {
+  const { user, loading, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [logoutError, setLogoutError] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -15,11 +16,7 @@ export default function AccountMenu({ onAdmin }: { onAdmin: () => void }) {
     return () => document.removeEventListener('pointerdown', onPointerDown);
   }, [menuOpen]);
 
-  if (loading) return null;
-
-  if (!user) {
-    return <button className="account-button" onClick={openLogin}>Sign in</button>;
-  }
+  if (loading || !user) return null;
 
   const initial = user.name.trim().charAt(0) || '?';
 
@@ -32,8 +29,14 @@ export default function AccountMenu({ onAdmin }: { onAdmin: () => void }) {
       <p><strong>{user.name}</strong><span>{user.email}</span>
         {user.role === 'admin' && <span className="account-role">Admin</span>}
       </p>
+      {user.role === 'customer' && <button role="menuitem" onClick={() => { setMenuOpen(false); onOrders(); }}>My orders</button>}
       {user.role === 'admin' && <button role="menuitem" onClick={() => { setMenuOpen(false); onAdmin(); }}>Admin dashboard</button>}
-      <button role="menuitem" onClick={() => { setMenuOpen(false); void logout(); }}>Log out</button>
+      <button role="menuitem" onClick={() => {
+        setLogoutError('');
+        void logout().then(() => { setMenuOpen(false); onLogout(); })
+          .catch(() => setLogoutError('Unable to sign out. Please try again.'));
+      }}>Log out</button>
+      {logoutError && <span className="account-error" role="alert">{logoutError}</span>}
     </div>}
   </div>;
 }

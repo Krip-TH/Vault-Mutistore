@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { BusinessAvailability, BusinessType, Product, ProductsResponse, StockStatus } from './types/product';
 import { ProductCard, ProductImage } from './components/ProductPresentation';
 import ProductDetail from './components/ProductDetail';
@@ -6,12 +6,61 @@ import CartDrawer from './components/CartDrawer';
 import Checkout from './components/Checkout';
 import OrderHistory from './components/OrderHistory';
 import AccountMenu from './components/AccountMenu';
-import AuthDialog from './components/AuthDialog';
+import AuthPage from './components/AuthPage';
 import AdminDashboard from './components/AdminDashboard';
 import { useAuth } from './auth/AuthContext';
+import { parseRoute, resolveProtectedRoute, routeAfterAuthentication, routeAfterLogout, routeHash } from './auth/routes';
+import type { AppRoute } from './auth/routes';
+import { customerNavigation } from './navigation';
 import { useCart } from './cart/CartContext';
 import { textValue } from './utils/product';
 import type { AdminView } from './types/admin';
+
+function App() {
+  const auth = useAuth();
+  const [requestedRoute, setRequestedRoute] = useState<AppRoute>(() => parseRoute(window.location.hash));
+  const navigate = useCallback((route: AppRoute, replace = false) => {
+    const hash = routeHash(route);
+    if (replace) window.history.replaceState(null, '', hash);
+    else window.history.pushState(null, '', hash);
+    setRequestedRoute(route);
+  }, []);
+
+  useEffect(() => {
+    const onHashChange = () => setRequestedRoute(parseRoute(window.location.hash));
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
+
+  const route = resolveProtectedRoute(requestedRoute, auth.user);
+  useEffect(() => {
+    if (!auth.loading && route !== requestedRoute) navigate(route, true);
+  }, [auth.loading, navigate, requestedRoute, route]);
+
+  if (auth.loading) {
+    return <main className="auth-loading" aria-busy="true"><span>V.</span><p>Opening VAULT…</p></main>;
+  }
+  if (!auth.user) {
+    const isAdminLogin = route === 'admin-login';
+    return <AuthPage view={route === 'register' ? 'register' : 'login'} mode={isAdminLogin ? 'admin' : 'customer'}
+      onViewChange={view => navigate(view)}
+      onAdminLogin={() => navigate('admin-login')}
+      onCustomerLogin={() => navigate('login')}
+      onAuthenticated={user => navigate(isAdminLogin ? 'admin' : routeAfterAuthentication(user), true)} />;
+  }
+  if (route === 'admin' || route === 'admin-orders') {
+    const view: AdminView = route === 'admin-orders' ? 'orders' : 'dashboard';
+    return <AdminDashboard view={view}
+      onViewChange={next => navigate(next === 'orders' ? 'admin-orders' : 'admin')}
+      onClose={() => navigate('home')}
+      onLogout={async () => {
+        const destination = routeAfterLogout(auth.user!);
+        await auth.logout();
+        navigate(destination, true);
+      }} />;
+  }
+  return <Storefront route={route} navigate={navigate} />;
+}
 
 const businessOptions: Array<{ value: BusinessType; label: string }> = [
   { value: 'door', label: 'Door' },
@@ -36,7 +85,7 @@ function readFavorites(): FavoriteState {
 }
 
 
-function App() {
+function Storefront({ route, navigate }: { route: AppRoute; navigate: (route: AppRoute, replace?: boolean) => void }) {
   const cart = useCart();
   const auth = useAuth();
   const [favorites, setFavorites] = useState<FavoriteState>(readFavorites);
@@ -53,10 +102,9 @@ function App() {
   const [category, setCategory] = useState('all');
   const [stockStatus, setStockStatus] = useState<StockStatus | 'all'>('all');
   const [checkoutOpen, setCheckoutOpen] = useState(false);
-  const [ordersOpen, setOrdersOpen] = useState(false);
   const [selectedOrderNo, setSelectedOrderNo] = useState<string | undefined>();
-  const [adminOpen, setAdminOpen] = useState(false);
-  const [adminView, setAdminView] = useState<AdminView>('dashboard');
+  const ordersOpen = route === 'orders';
+  const logoutDestination = auth.user ? routeAfterLogout(auth.user) : 'login';
 
   useEffect(() => {
     const controller = new AbortController();
@@ -108,27 +156,9 @@ function App() {
   useEffect(() => {
     if (!auth.loading && !auth.user) {
       setCheckoutOpen(false);
-      setOrdersOpen(false);
       setSelectedOrderNo(undefined);
-      setAdminOpen(false);
     }
   }, [auth.loading, auth.user]);
-  useEffect(() => {
-    function syncAdminRoute() {
-      if (!window.location.hash.startsWith('#admin') || auth.loading) return;
-      if (auth.user?.role === 'admin') {
-        setAdminView(window.location.hash === '#admin/orders' ? 'orders' : 'dashboard');
-        setAdminOpen(true);
-        return;
-      }
-      setAdminOpen(false);
-      window.history.replaceState(null, '', '#home');
-      if (!auth.user) auth.openLogin();
-    }
-    syncAdminRoute();
-    window.addEventListener('hashchange', syncAdminRoute);
-    return () => window.removeEventListener('hashchange', syncAdminRoute);
-  }, [auth.loading, auth.openLogin, auth.user]);
 
   const categories = useMemo(
     () => [...new Set(products.map((product) => textValue(product.category)).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
@@ -169,33 +199,18 @@ function App() {
   }
 
   function openOrders(orderNo?: string) {
-    if (!auth.user) {
-      auth.openLogin();
-      return;
-    }
     setCheckoutOpen(false);
     setSelectedOrderNo(orderNo);
-    setOrdersOpen(true);
+    navigate('orders');
   }
 
   function openCheckout() {
-    if (!auth.user) {
-      auth.openLogin();
-      return;
-    }
     setCheckoutOpen(true);
   }
 
   function openAdmin(view: AdminView) {
     if (auth.user?.role !== 'admin') return;
-    setAdminView(view);
-    setAdminOpen(true);
-    window.history.replaceState(null, '', view === 'orders' ? '#admin/orders' : '#admin');
-  }
-
-  function closeAdmin() {
-    setAdminOpen(false);
-    window.history.replaceState(null, '', '#home');
+    navigate(view === 'orders' ? 'admin-orders' : 'admin');
   }
 
   const [selection, setSelected] = useState<Product | null>(null);
@@ -210,9 +225,9 @@ function App() {
     <div id="home">
       <a className="skip-link" href="#explore">Skip to products</a>
       <header className="site-header">
-        <a className="brand" href="#home"><span className="brand-symbol">V.</span><span>VAULT</span></a>
-        <nav className="desktop-nav" aria-label="Main navigation"><a href="#home">Home</a><a href="#explore">Explore</a><a href="#businesses">Businesses</a><button onClick={() => openOrders()}>Orders</button></nav>
-        <div className="header-actions"><a href="#search">Search <span aria-hidden="true">⌕</span></a><a className="inventory-link" href="#inventory">Inventory <span>{loading || error ? '—' : summary.total}</span></a><button className="header-cart" onClick={cart.openCart} aria-label={`Open cart with ${cart.itemCount} items`}>Cart <span>{cart.itemCount}</span></button><AccountMenu onAdmin={() => openAdmin('dashboard')} /></div>
+        <a className="brand" href="#/home"><span className="brand-symbol">V.</span><span>VAULT</span></a>
+        <nav className="desktop-nav" aria-label="Main navigation">{customerNavigation.map(item => <a key={item.label} href={item.href}>{item.label}</a>)}<button onClick={() => openOrders()}>Orders</button></nav>
+        <div className="header-actions"><a href="#search">Search <span aria-hidden="true">⌕</span></a><a className="inventory-link" href="#inventory">Inventory <span>{loading || error ? '—' : summary.total}</span></a><button className="header-cart" onClick={cart.openCart} aria-label={`Open cart with ${cart.itemCount} items`}>Cart <span>{cart.itemCount}</span></button><AccountMenu onOrders={() => openOrders()} onAdmin={() => openAdmin('dashboard')} onLogout={() => navigate(logoutDestination, true)} /></div>
       </header>
       <main className="page-shell">
         <section className="hero" aria-labelledby="hero-title">
@@ -242,9 +257,9 @@ function App() {
             {!loading && !error && filteredProducts.length > 0 && <div className="product-grid">{filteredProducts.map(product => <ProductCard key={JSON.stringify([product.business, product.id])} product={product} onSelect={setSelected} />)}</div>}
           </div>
         </section>
-        <footer className="site-footer"><a className="footer-brand" href="#home">VAULT — Multi-Store Marketplace Application</a><p>Six independent businesses. One shared perspective.</p><a href="#home">Back to top ↑</a></footer>
+        <footer className="site-footer"><a className="footer-brand" href="#/home">VAULT — Multi-Store Marketplace Application</a><p>Six independent businesses. One shared perspective.</p><a href="#/home">Back to top ↑</a></footer>
       </main>
-      <nav className="mobile-nav" aria-label="Mobile navigation"><a href="#home">Home</a><a href="#explore">Explore</a><button onClick={() => openOrders()}>Orders</button><button onClick={cart.openCart}>Cart <span>{cart.itemCount}</span></button></nav>
+      <nav className="mobile-nav" aria-label="Mobile navigation"><a href="#/home">Home</a><a href="#explore">Explore</a><button onClick={() => openOrders()}>Orders</button><button onClick={cart.openCart}>Cart <span>{cart.itemCount}</span></button></nav>
       {selected && <ProductDetail key={productKey(selected)} product={selected} onClose={() => setSelected(null)}
         inventoryAvailable={inventoryAvailable}
         favorite={favorites.favorites.includes(productKey(selected))}
@@ -254,10 +269,7 @@ function App() {
         onContinue={() => document.querySelector('#explore')?.scrollIntoView({ behavior: 'smooth' })}
         onViewOrder={openOrders} />}
       {ordersOpen && <OrderHistory key={selectedOrderNo || 'history'} initialOrderNo={selectedOrderNo}
-        onClose={() => { setOrdersOpen(false); setSelectedOrderNo(undefined); }} />}
-      {auth.isAuthOpen && <AuthDialog onClose={auth.closeAuth} />}
-      {adminOpen && auth.user?.role === 'admin' && <AdminDashboard view={adminView}
-        onViewChange={openAdmin} onClose={closeAdmin} />}
+        onClose={() => { setSelectedOrderNo(undefined); navigate('home'); }} />}
     </div>
   );
 }

@@ -1,34 +1,30 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   fetchAdminDashboard, fetchAdminOrder, fetchAdminOrders, updateAdminOrderStatus,
 } from '../admin/adminApi';
 import type { AdminDashboardData, AdminOrder, AdminOrderSummary, AdminView } from '../types/admin';
 import type { OrderStatus } from '../types/order';
+import { useAuth } from '../auth/AuthContext';
+import { adminNavigation } from '../navigation';
 
 const price = new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' });
 const dateTime = new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short' });
 const statuses: OrderStatus[] = ['pending', 'confirmed', 'processing', 'shipped', 'completed', 'cancelled'];
 
-export default function AdminDashboard({ view, onViewChange, onClose }: {
+export default function AdminDashboard({ view, onViewChange, onClose, onLogout }: {
   view: AdminView;
   onViewChange: (view: AdminView) => void;
   onClose: () => void;
+  onLogout: () => Promise<void>;
 }) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
+  const { user } = useAuth();
   const [dashboard, setDashboard] = useState<AdminDashboardData | null>(null);
   const [orders, setOrders] = useState<AdminOrderSummary[]>([]);
   const [selected, setSelected] = useState<AdminOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-    const previousOverflow = document.body.style.overflow;
-    dialog.showModal();
-    document.body.style.overflow = 'hidden';
-    return () => { dialog.close(); document.body.style.overflow = previousOverflow; };
-  }, []);
+  const [logoutError, setLogoutError] = useState('');
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -52,21 +48,32 @@ export default function AdminDashboard({ view, onViewChange, onClose }: {
     finally { setLoading(false); }
   }
 
-  return <dialog ref={dialogRef} className="admin-dialog" aria-labelledby="admin-title" onCancel={onClose}>
+  async function logout() {
+    setLoggingOut(true);
+    setLogoutError('');
+    try { await onLogout(); }
+    catch { setLogoutError('Unable to sign out. Please try again.'); setLoggingOut(false); }
+  }
+
+  return <div className="admin-page" aria-labelledby="admin-title">
     <div className="admin-shell">
       <aside className="admin-sidebar">
-        <a className="admin-brand" href="#home" onClick={event => { event.preventDefault(); onClose(); }}><span>V.</span> VAULT</a>
+        <a className="admin-brand" href="#/home" onClick={event => { event.preventDefault(); onClose(); }}><span>V.</span> VAULT ADMIN</a>
         <p>Administration</p>
         <nav aria-label="Admin navigation">
-          <button className={view === 'dashboard' ? 'is-active' : ''} onClick={() => onViewChange('dashboard')}>Dashboard</button>
-          <button className={view === 'orders' ? 'is-active' : ''} onClick={() => onViewChange('orders')}>Orders</button>
+          {adminNavigation.map(item => <button key={item.view} className={view === item.view ? 'is-active' : ''}
+            onClick={() => onViewChange(item.view)}>{item.label}</button>)}
         </nav>
-        <button className="admin-return" onClick={onClose}>← Return to store</button>
+        <div className="admin-sidebar-footer">
+          <button className="admin-return" onClick={onClose}>← Return to store</button>
+          <div className="admin-account"><span>{user?.name}</span><small>{user?.email}</small></div>
+          <button className="admin-logout" onClick={() => void logout()} disabled={loggingOut}>{loggingOut ? 'Signing out…' : 'Log out'}</button>
+          {logoutError && <p className="admin-logout-error" role="alert">{logoutError}</p>}
+        </div>
       </aside>
       <main className="admin-main">
         <header className="admin-header">
           <div><p className="eyebrow">VAULT ADMIN</p><h2 id="admin-title">{selected ? selected.order_no : view === 'dashboard' ? 'Dashboard' : 'Orders'}</h2></div>
-          <button className="checkout-close" onClick={onClose} aria-label="Close admin dashboard">×</button>
         </header>
         {loading && <AdminState title="Loading admin data…" />}
         {!loading && error && <AdminState title="Unable to load admin data." detail={error} action={() => void load()} />}
@@ -82,7 +89,7 @@ export default function AdminDashboard({ view, onViewChange, onClose }: {
           <OrdersView orders={orders} onOpen={orderNo => void openOrder(orderNo)} />}
       </main>
     </div>
-  </dialog>;
+  </div>;
 }
 
 function DashboardView({ data, onOpen }: { data: AdminDashboardData; onOpen: (orderNo: string) => void }) {
