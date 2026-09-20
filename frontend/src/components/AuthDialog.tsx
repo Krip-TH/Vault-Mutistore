@@ -62,7 +62,7 @@ export default function AuthDialog({ onClose }: { onClose: () => void }) {
         <button type="button" className="checkout-close" onClick={onClose} disabled={submitting} aria-label="Close">×</button>
       </header>
       <div className="auth-body">
-        <p className="eyebrow">MOODENG MULTISTORE</p>
+        <p className="eyebrow">VAULT</p>
         <h2 id="auth-title">{isRegister ? 'Create your account.' : 'Welcome back.'}</h2>
         <p className="auth-subtitle">{isRegister ? 'Sign up to place orders and track your purchase history.' : 'Sign in to continue to your account.'}</p>
 
@@ -87,7 +87,7 @@ export default function AuthDialog({ onClose }: { onClose: () => void }) {
         </button>
 
         <p className="auth-switch">
-          {isRegister ? 'Already have an account? ' : 'New to Moodeng MultiStore? '}
+          {isRegister ? 'Already have an account? ' : 'New to VAULT? '}
           <button type="button" className="text-button" onClick={() => switchView(isRegister ? 'login' : 'register')} disabled={submitting}>
             {isRegister ? 'Sign in' : 'Create an account'}
           </button>

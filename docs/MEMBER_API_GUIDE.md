@@ -34,7 +34,7 @@ Example for the Clothing member:
 
 ```bash
 git clone <repository-url>
-cd Moodeng-MultiStore
+cd VAULT
 git checkout main
 git pull origin main
 git checkout -b feature/clothing-api

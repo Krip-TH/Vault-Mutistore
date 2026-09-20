@@ -154,7 +154,7 @@ function App() {
     <div id="home">
       <a className="skip-link" href="#explore">Skip to products</a>
       <header className="site-header">
-        <a className="brand" href="#home"><span className="brand-symbol">m.</span><span>Moodeng<span className="brand-subtitle">MULTISTORE</span></span></a>
+        <a className="brand" href="#home"><span className="brand-symbol">V.</span><span>VAULT</span></a>
         <nav className="desktop-nav" aria-label="Main navigation"><a href="#home">Home</a><a href="#explore">Explore</a><a href="#businesses">Businesses</a><button onClick={() => openOrders()}>Orders</button></nav>
         <div className="header-actions"><a href="#search">Search <span aria-hidden="true">⌕</span></a><a className="inventory-link" href="#inventory">Inventory <span>{loading || error ? '—' : summary.total}</span></a><button className="header-cart" onClick={cart.openCart} aria-label={`Open cart with ${cart.itemCount} items`}>Cart <span>{cart.itemCount}</span></button><AccountMenu /></div>
       </header>
@@ -162,12 +162,12 @@ function App() {
         <section className="hero" aria-labelledby="hero-title">
           <div className="hero-copy"><p className="eyebrow">SIX BUSINESSES. ONE DESTINATION.</p><h1 id="hero-title">A world of finds.<br /><em>All in one place.</em></h1><p className="hero-description">From the spaces you create to the essentials you carry. Discover products and explore live inventory from six independent businesses.</p><a className="primary-button" href="#explore">Explore the collection <span aria-hidden="true">↗</span></a><p className="hero-note"><span className="small-dot" /> Thoughtful discovery. A clearer view of stock.</p></div>
           <div className="hero-visual"><span className="eyebrow hero-caption">THE EVERYDAY, RECONSIDERED</span>
-            {featured && !loading && !error ? <button className="hero-product" onClick={() => setSelected(featured)} aria-label={`View ${featured.name}`}><ProductImage product={featured} eager /><span className="hero-product-label"><span>{featured.business_name}<strong>{featured.name}</strong></span><span className="round-arrow" aria-hidden="true">↗</span></span></button> : <div className="hero-placeholder"><span className="editorial-mark">m.</span><p>Many perspectives.<br />One collection.</p></div>}
+            {featured && !loading && !error ? <button className="hero-product" onClick={() => setSelected(featured)} aria-label={`View ${featured.name}`}><ProductImage product={featured} eager /><span className="hero-product-label"><span>{featured.business_name}<strong>{featured.name}</strong></span><span className="round-arrow" aria-hidden="true">↗</span></span></button> : <div className="hero-placeholder"><span className="editorial-mark">V.</span><p>Many perspectives.<br />One collection.</p></div>}
           </div>
         </section>
         <section className="inventory-strip" id="inventory" aria-label="Inventory summary"><div className="inventory-intro"><p className="eyebrow">AT A GLANCE</p><h2>The inventory edit.</h2><span>{loading ? 'Connecting to inventory…' : error ? 'Inventory unavailable' : 'From the latest response'}</span></div><dl className="metrics">{[['Total products', summary.total], ['Businesses', summary.businesses], ['In Stock', summary.inStock], ['Low Stock', summary.lowStock], ['Out of Stock', summary.outOfStock]].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{loading || error ? '—' : value}</dd></div>)}</dl></section>
         <section id="explore" className="discovery" aria-labelledby="collection-title">
-          <div className="section-heading"><div><p className="eyebrow">EXPLORE MOODENG</p><h2 id="collection-title">Find your next everyday.</h2></div><p>Distinct businesses. Endless possibilities.</p></div>
+          <div className="section-heading"><div><p className="eyebrow">EXPLORE VAULT</p><h2 id="collection-title">Find your next everyday.</h2></div><p>Distinct businesses. Endless possibilities.</p></div>
           <div id="businesses" className="business-chips" role="group" aria-label="Filter by business"><button aria-pressed={business === 'all'} onClick={() => setBusiness('all')}>All Businesses</button>{businessOptions.map(option => <button key={option.value} aria-pressed={business === option.value} onClick={() => setBusiness(option.value)}>{option.label}</button>)}</div>
           <div className="filter-bar">
             <label className="search-field"><span className="sr-only">Search by product name</span><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Search for something special…" value={search} onChange={event => setSearch(event.target.value)} /></label>
@@ -184,7 +184,7 @@ function App() {
             {!loading && !error && filteredProducts.length > 0 && <div className="product-grid">{filteredProducts.map(product => <ProductCard key={JSON.stringify([product.business, product.id])} product={product} onSelect={setSelected} />)}</div>}
           </div>
         </section>
-        <footer className="site-footer"><a className="footer-brand" href="#home">Moodeng MultiStore</a><p>Six independent businesses. One shared perspective.</p><a href="#home">Back to top ↑</a></footer>
+        <footer className="site-footer"><a className="footer-brand" href="#home">VAULT — Multi-Store Marketplace Application</a><p>Six independent businesses. One shared perspective.</p><a href="#home">Back to top ↑</a></footer>
       </main>
       <nav className="mobile-nav" aria-label="Mobile navigation"><a href="#home">Home</a><a href="#explore">Explore</a><button onClick={() => openOrders()}>Orders</button><button onClick={cart.openCart}>Cart <span>{cart.itemCount}</span></button></nav>
       {selected && <ProductDetail key={productKey(selected)} product={selected} onClose={() => setSelected(null)}
