@@ -23,5 +23,5 @@ app.use((error: unknown, _request: Request, response: Response, _next: NextFunct
 });
 
 app.listen(port, '0.0.0.0', () => {
-  console.log(`Moodeng MultiStore API listening on port ${port}`);
+  console.log(`VAULT API listening on port ${port}`);
 });
