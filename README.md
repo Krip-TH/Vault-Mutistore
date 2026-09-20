@@ -76,7 +76,14 @@ For development without Docker, install Node.js 20 or newer, npm, and MySQL 8.
 1. Clone the repository and enter its directory.
 2. Copy the environment template with `Copy-Item .env.example .env` on Windows, or `cp .env.example .env` on macOS/Linux.
 3. Change the placeholder passwords in `.env` if the environment is shared.
-4. Run:
+4. Ensure the compatibility volume used by the team exists. This command is
+   idempotent and does not replace an existing volume:
+
+   ```bash
+   docker volume create moodengmultistore_mysql_data
+   ```
+
+5. Run:
 
    ```bash
    docker compose up -d --build
@@ -90,7 +97,48 @@ Open:
 
 Run `docker compose down` to stop the services. The named MySQL volume preserves data between restarts.
 
-`database/init.sql` runs automatically only when MySQL initializes a new empty volume. For an existing development volume, apply `database/migrations/001_orders.sql` once through MySQL or phpMyAdmin before using checkout.
+The canonical application database is `vault_multistore`, configured through
+`MYSQL_DATABASE`. The Docker volume intentionally retains its historical name,
+`moodengmultistore_mysql_data`, so existing development data remains attached;
+the volume name does not determine which MySQL database the backend uses. Do not
+rename or delete that volume as part of the database-name migration.
+
+`database/init.sql` runs automatically only when MySQL initializes a new empty
+volume and creates the complete current `vault_multistore` schema. For an
+existing VAULT database that predates order ownership, apply
+`database/migrations/002_order_ownership.sql` once through MySQL or phpMyAdmin.
+`database/migrations/001_orders.sql` is retained only as historical migration
+history for the former `moodeng_multistore` database and must not be used to
+initialize a new VAULT database.
+
+Changing `MYSQL_DATABASE` alone does not copy data or rerun initialization SQL
+inside an existing volume. Keep the former database temporarily as rollback,
+verify the six expected tables and relevant row counts in `vault_multistore`,
+and switch the backend only after the VAULT database and `vault_user` grants are
+confirmed. Never use `docker compose down -v` for this migration.
+
+To migrate an existing local Compose database non-destructively, run from a
+shell with Docker available:
+
+```bash
+sh database/migrate-to-vault.sh
+```
+
+The script creates and fully copies the target only when it is absent or empty.
+If `vault_multistore` is already populated, it never overwrites it: it verifies
+that every source row is present by primary key, preserves any newer VAULT rows,
+ensures order ownership exists, and refreshes the application-user grant. It
+stops on partial targets or conflicting migration states instead of deleting or
+resetting data.
+
+If the application has already been switched and legitimate VAULT records have
+changed since the original copy, inspect the reported conflicts first. To keep
+the populated VAULT version while retaining the unchanged source as rollback,
+rerun explicitly with:
+
+```bash
+PRESERVE_POPULATED_TARGET=1 sh database/migrate-to-vault.sh
+```
 
 ## Local development
 
