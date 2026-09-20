@@ -8,6 +8,8 @@ import type { NewOrder, Order } from '../src/types/order.js';
 import type { NormalizedProduct } from '../src/types/product.js';
 
 const now = new Date('2026-09-19T08:30:00.000Z');
+const userA = 41;
+const userB = 42;
 const product: NormalizedProduct = {
   id: 'door-1', business: 'door', business_name: 'Door', name: 'Walnut Entry Door',
   category: 'Entry doors', price: 2499.5, stock: 4, unit: 'piece', status: 'In Stock',
@@ -27,10 +29,14 @@ function mockRepository(overrides: Partial<OrderRepository> = {}) {
   const value: OrderRepository = {
     async create(order) {
       saved = order;
-      return { ...order, created_at: now.toISOString(), updated_at: now.toISOString() };
+      return {
+        order_no: order.order_no, customer: order.customer, shipping: order.shipping, items: order.items,
+        subtotal: order.subtotal, shipping_fee: order.shipping_fee, discount: order.discount,
+        total: order.total, status: order.status, created_at: now.toISOString(), updated_at: now.toISOString(),
+      };
     },
-    async listNewest() { return []; },
-    async findByOrderNo() { return null; },
+    async listNewestForUser() { return []; },
+    async findByOrderNoForUser() { return null; },
     ...overrides,
   };
   return { value, getSaved: () => saved };
@@ -50,11 +56,12 @@ test('uses current server pricing and loads only businesses in the order', async
   const loaded: string[] = [];
   const payload = {
     ...validPayload,
+    user_id: userB,
     subtotal: 0.01,
     total: 0.01,
     items: [{ ...validPayload.items[0], price: 0.01, unit_price: 0.01, line_total: 0.02 }],
   };
-  const order = await createOrder(payload, {
+  const order = await createOrder(userA, payload, {
     repository: repository.value,
     now: () => now,
     randomSuffix: () => 'ABC123',
@@ -67,12 +74,15 @@ test('uses current server pricing and loads only businesses in the order', async
   assert.equal(order.items[0].line_total, 4999);
   assert.equal(order.subtotal, 4999);
   assert.equal(order.total, 4999);
+  assert.equal('user_id' in order, false);
+  assert.equal(repository.getSaved()?.user_id, userA);
   assert.equal(repository.getSaved()?.items[0].product_name, product.name);
 });
 
 test('rejects invalid quantities before loading products', async () => {
   let loaded = false;
   await expectApiError(createOrder(
+    userA,
     { ...validPayload, items: [{ ...validPayload.items[0], quantity: 0 }] },
     { repository: mockRepository().value, loadProducts: async () => { loaded = true; return [product]; } },
   ), 400, 'INVALID_QUANTITY');
@@ -81,20 +91,21 @@ test('rejects invalid quantities before loading products', async () => {
 
 test('rejects quantities above available stock', async () => {
   await expectApiError(createOrder(
+    userA,
     { ...validPayload, items: [{ ...validPayload.items[0], quantity: 5 }] },
     { repository: mockRepository().value, loadProducts: async () => [product] },
   ), 409, 'INSUFFICIENT_STOCK');
 });
 
 test('rejects products that are no longer available upstream', async () => {
-  await expectApiError(createOrder(validPayload, {
+  await expectApiError(createOrder(userA, validPayload, {
     repository: mockRepository().value,
     loadProducts: async () => [{ ...product, id: 'another-product' }],
   }), 404, 'PRODUCT_NOT_FOUND');
 });
 
 test('returns a safe error when upstream product validation fails', async () => {
-  await expectApiError(createOrder(validPayload, {
+  await expectApiError(createOrder(userA, validPayload, {
     repository: mockRepository().value,
     loadProducts: async () => { throw new Error('upstream credentials'); },
   }), 502, 'INVENTORY_UNAVAILABLE');
@@ -102,7 +113,7 @@ test('returns a safe error when upstream product validation fails', async () => 
 
 test('does not report success when transactional persistence fails', async () => {
   const failure = new Error('transaction rolled back');
-  await assert.rejects(createOrder(validPayload, {
+  await assert.rejects(createOrder(userA, validPayload, {
     repository: mockRepository({ async create() { throw failure; } }).value,
     loadProducts: async () => [product],
   }), failure);
@@ -138,9 +149,13 @@ test('retrieves a persisted order by order number', async () => {
     created_at: now.toISOString(), updated_at: now.toISOString(),
   };
   const repository = mockRepository({
-    async findByOrderNo(orderNo) { assert.equal(orderNo, persisted.order_no); return persisted; },
+    async findByOrderNoForUser(orderNo, userId) {
+      assert.equal(orderNo, persisted.order_no);
+      assert.equal(userId, userA);
+      return persisted;
+    },
   });
-  assert.deepEqual(await getOrder(persisted.order_no, repository.value), persisted);
+  assert.deepEqual(await getOrder(userA, persisted.order_no, repository.value), persisted);
 });
 
 test('lists repository order summaries in repository order', async () => {
@@ -148,10 +163,35 @@ test('lists repository order summaries in repository order', async () => {
     { order_no: 'MDG-20260919-NEW001', total: 4999, status: 'confirmed' as const, item_count: 2, created_at: now.toISOString() },
     { order_no: 'MDG-20260918-OLD001', total: 2499.5, status: 'completed' as const, item_count: 1, created_at: '2026-09-18T08:30:00.000Z' },
   ];
-  const repository = mockRepository({ async listNewest() { return summaries; } });
-  assert.deepEqual(await listOrders(repository.value), summaries);
+  const repository = mockRepository({
+    async listNewestForUser(userId) {
+      assert.equal(userId, userA);
+      return summaries;
+    },
+  });
+  assert.deepEqual(await listOrders(userA, repository.value), summaries);
 });
 
 test('returns not found for an unknown valid order number', async () => {
-  await expectApiError(getOrder('MDG-20260919-ZZZ999', mockRepository().value), 404, 'ORDER_NOT_FOUND');
+  await expectApiError(getOrder(userA, 'MDG-20260919-ZZZ999', mockRepository().value), 404, 'ORDER_NOT_FOUND');
+});
+
+test('does not return another user\'s order detail', async () => {
+  const repository = mockRepository({
+    async findByOrderNoForUser(_orderNo, userId) {
+      assert.equal(userId, userB);
+      return null;
+    },
+  });
+  await expectApiError(getOrder(userB, 'MDG-20260919-ABC123', repository.value), 404, 'ORDER_NOT_FOUND');
+});
+
+test('does not include another user\'s orders in history', async () => {
+  const repository = mockRepository({
+    async listNewestForUser(userId) {
+      assert.equal(userId, userB);
+      return [];
+    },
+  });
+  assert.deepEqual(await listOrders(userB, repository.value), []);
 });

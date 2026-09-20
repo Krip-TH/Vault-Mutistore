@@ -17,7 +17,12 @@ export interface OrderServiceDependencies {
 
 const businessTypes = new Set<BusinessType>(Object.keys(adapters) as BusinessType[]);
 
-export async function createOrder(payload: unknown, overrides: Partial<OrderServiceDependencies> = {}): Promise<Order> {
+export async function createOrder(
+  userId: number,
+  payload: unknown,
+  overrides: Partial<OrderServiceDependencies> = {},
+): Promise<Order> {
+  const ownerId = authenticatedUserId(userId);
   const request = parseCreateOrderRequest(payload);
   const dependencies: OrderServiceDependencies = {
     loadProducts: loadBusinessProducts,
@@ -31,6 +36,7 @@ export async function createOrder(payload: unknown, overrides: Partial<OrderServ
   const subtotalCents = items.reduce((sum, item) => sum + Math.round(item.line_total * 100), 0);
   const subtotal = subtotalCents / 100;
   const base: Omit<NewOrder, 'order_no'> = {
+    user_id: ownerId,
     customer: request.customer,
     shipping: request.shipping,
     items,
@@ -52,15 +58,16 @@ export async function createOrder(payload: unknown, overrides: Partial<OrderServ
   throw new Error('Unable to allocate order number');
 }
 
-export async function getOrder(orderNo: string, repository: OrderRepository = orderRepository): Promise<Order> {
+export async function getOrder(userId: number, orderNo: string, repository: OrderRepository = orderRepository): Promise<Order> {
+  const ownerId = authenticatedUserId(userId);
   if (!/^MDG-\d{8}-[A-Z0-9]{6}$/.test(orderNo)) throw new ApiError(400, 'INVALID_ORDER_NUMBER', 'Invalid order number.');
-  const order = await repository.findByOrderNo(orderNo);
+  const order = await repository.findByOrderNoForUser(orderNo, ownerId);
   if (!order) throw new ApiError(404, 'ORDER_NOT_FOUND', 'Order not found.');
   return order;
 }
 
-export async function listOrders(repository: OrderRepository = orderRepository): Promise<OrderSummary[]> {
-  return repository.listNewest();
+export async function listOrders(userId: number, repository: OrderRepository = orderRepository): Promise<OrderSummary[]> {
+  return repository.listNewestForUser(authenticatedUserId(userId));
 }
 
 export function parseCreateOrderRequest(payload: unknown): CreateOrderRequest {
@@ -165,4 +172,11 @@ function optionalText(value: unknown, maxLength: number) {
 
 function isDuplicateEntry(error: unknown) {
   return typeof error === 'object' && error !== null && 'code' in error && error.code === 'ER_DUP_ENTRY';
+}
+
+function authenticatedUserId(userId: number) {
+  if (!Number.isSafeInteger(userId) || userId < 1) {
+    throw new ApiError(401, 'UNAUTHENTICATED', 'Sign in to continue.');
+  }
+  return userId;
 }

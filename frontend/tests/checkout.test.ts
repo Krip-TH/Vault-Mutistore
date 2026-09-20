@@ -53,12 +53,17 @@ test('builds a minimal request without trusting cart prices or totals', () => {
 
 test('clears the cart only after an accepted order response', async () => {
   let clearCount = 0;
-  const fetcher: typeof fetch = async () => new Response(JSON.stringify({ data: order }), {
-    status: 201, headers: { 'Content-Type': 'application/json' },
-  });
+  let credentials: RequestCredentials | undefined;
+  const fetcher: typeof fetch = async (_input, init) => {
+    credentials = init?.credentials;
+    return new Response(JSON.stringify({ data: order }), {
+      status: 201, headers: { 'Content-Type': 'application/json' },
+    });
+  };
   const result = await completeCheckout(createOrderRequest(form, items), () => { clearCount += 1; }, fetcher);
   assert.equal(result.order_no, order.order_no);
   assert.equal(clearCount, 1);
+  assert.equal(credentials, 'same-origin');
 });
 
 test('keeps the cart when order submission fails', async () => {
@@ -103,4 +108,16 @@ test('reports an invalid order history response', async () => {
     status: 200, headers: { 'Content-Type': 'application/json' },
   });
   await assert.rejects(fetchOrders(fetcher), /incomplete/);
+});
+
+test('surfaces the authentication error and sends the session cookie policy', async () => {
+  let credentials: RequestCredentials | undefined;
+  const fetcher: typeof fetch = async (_input, init) => {
+    credentials = init?.credentials;
+    return new Response(JSON.stringify({
+      error: { code: 'UNAUTHENTICATED', message: 'Sign in to continue.' },
+    }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+  };
+  await assert.rejects(fetchOrders(fetcher), /Sign in to continue/);
+  assert.equal(credentials, 'same-origin');
 });

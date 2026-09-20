@@ -4,8 +4,8 @@ import type { NewOrder, Order, OrderItem, OrderStatus, OrderSummary } from '../t
 
 export interface OrderRepository {
   create(order: NewOrder): Promise<Order>;
-  listNewest(): Promise<OrderSummary[]>;
-  findByOrderNo(orderNo: string): Promise<Order | null>;
+  listNewestForUser(userId: number): Promise<OrderSummary[]>;
+  findByOrderNoForUser(orderNo: string, userId: number): Promise<Order | null>;
 }
 
 export interface TransactionLifecycle {
@@ -68,12 +68,12 @@ export const orderRepository: OrderRepository = {
     const connection = await pool.getConnection();
     return withTransaction(connection, async () => {
       const [result] = await connection.execute<ResultSetHeader>(`INSERT INTO orders (
-        order_no, customer_name, customer_email, customer_phone,
+        user_id, order_no, customer_name, customer_email, customer_phone,
         shipping_address_line1, shipping_address_line2, shipping_district,
         shipping_province, shipping_postal_code, shipping_country,
         subtotal, shipping_fee, discount, total, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
-        order.order_no, order.customer.name, order.customer.email, order.customer.phone,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
+        order.user_id, order.order_no, order.customer.name, order.customer.email, order.customer.phone,
         order.shipping.address_line1, order.shipping.address_line2 || null, order.shipping.district,
         order.shipping.province, order.shipping.postal_code, order.shipping.country,
         order.subtotal, order.shipping_fee, order.discount, order.total, order.status,
@@ -88,16 +88,29 @@ export const orderRepository: OrderRepository = {
         ]);
       }
       const now = new Date().toISOString();
-      return { ...order, created_at: now, updated_at: now };
+      return {
+        order_no: order.order_no,
+        customer: order.customer,
+        shipping: order.shipping,
+        items: order.items,
+        subtotal: order.subtotal,
+        shipping_fee: order.shipping_fee,
+        discount: order.discount,
+        total: order.total,
+        status: order.status,
+        created_at: now,
+        updated_at: now,
+      };
     });
   },
 
-  async listNewest() {
+  async listNewestForUser(userId) {
     const [rows] = await pool.execute<OrderSummaryRow[]>(`SELECT o.order_no, o.total, o.status,
       COALESCE(SUM(oi.quantity), 0) AS item_count, o.created_at
       FROM orders o LEFT JOIN order_items oi ON oi.order_id = o.id
+      WHERE o.user_id = ?
       GROUP BY o.id, o.order_no, o.total, o.status, o.created_at
-      ORDER BY o.created_at DESC, o.id DESC LIMIT 100`);
+      ORDER BY o.created_at DESC, o.id DESC LIMIT 100`, [userId]);
     return rows.map(row => ({
       order_no: row.order_no,
       total: row.total,
@@ -107,8 +120,11 @@ export const orderRepository: OrderRepository = {
     }));
   },
 
-  async findByOrderNo(orderNo) {
-    const [rows] = await pool.execute<OrderRow[]>('SELECT * FROM orders WHERE order_no = ? LIMIT 1', [orderNo]);
+  async findByOrderNoForUser(orderNo, userId) {
+    const [rows] = await pool.execute<OrderRow[]>(
+      'SELECT * FROM orders WHERE order_no = ? AND user_id = ? LIMIT 1',
+      [orderNo, userId],
+    );
     const row = rows[0];
     if (!row) return null;
     const [itemRows] = await pool.execute<OrderItemRow[]>(`SELECT product_id, business, business_name,

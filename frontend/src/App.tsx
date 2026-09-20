@@ -98,6 +98,13 @@ function App() {
   useEffect(() => {
     if (!loading && !error) cart.syncProducts(products);
   }, [cart.syncProducts, error, loading, products]);
+  useEffect(() => {
+    if (!auth.loading && !auth.user) {
+      setCheckoutOpen(false);
+      setOrdersOpen(false);
+      setSelectedOrderNo(undefined);
+    }
+  }, [auth.loading, auth.user]);
 
   const categories = useMemo(
     () => [...new Set(products.map((product) => textValue(product.category)).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
@@ -138,11 +145,22 @@ function App() {
   }
 
   function openOrders(orderNo?: string) {
+    if (!auth.user) {
+      auth.openLogin();
+      return;
+    }
     setCheckoutOpen(false);
     setSelectedOrderNo(orderNo);
     setOrdersOpen(true);
   }
 
+  function openCheckout() {
+    if (!auth.user) {
+      auth.openLogin();
+      return;
+    }
+    setCheckoutOpen(true);
+  }
 
   const [selection, setSelected] = useState<Product | null>(null);
   const currentSelection = selection ? products.find(product => productKey(product) === productKey(selection)) : undefined;
@@ -191,7 +209,7 @@ function App() {
         inventoryAvailable={inventoryAvailable}
         favorite={favorites.favorites.includes(productKey(selected))}
         onFavorite={() => setFavorites(current => ({ favorites: current.favorites.includes(productKey(selected)) ? current.favorites.filter(key => key !== productKey(selected)) : [...current.favorites, productKey(selected)] }))} />}
-      <CartDrawer onExplore={() => document.querySelector('#explore')?.scrollIntoView({ behavior: 'smooth' })} onCheckout={() => setCheckoutOpen(true)} />
+      <CartDrawer onExplore={() => document.querySelector('#explore')?.scrollIntoView({ behavior: 'smooth' })} onCheckout={openCheckout} />
       {checkoutOpen && <Checkout onClose={() => setCheckoutOpen(false)}
         onContinue={() => document.querySelector('#explore')?.scrollIntoView({ behavior: 'smooth' })}
         onViewOrder={openOrders} />}
