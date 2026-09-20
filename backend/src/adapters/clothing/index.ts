@@ -98,8 +98,7 @@ export const clothingAdapter: ProductAdapter = {
   async getProducts() {
     const configuredUrl = process.env.CLOTHING_API_URL;
     if (!configuredUrl) {
-      console.warn('[clothing] CLOTHING_API_URL is not configured');
-      return [];
+      throw new Error('CLOTHING_API_URL is not configured');
     }
 
     try {
@@ -119,8 +118,8 @@ export const clothingAdapter: ProductAdapter = {
 
       return products.map(normalizeProduct);
     } catch (error) {
-      console.error(`[clothing] Product request failed (${configuredUrl}):`, error);
-      return [];
+      const detail = error instanceof Error ? error.message : 'unknown upstream error';
+      throw new Error(`Clothing API request failed: ${detail}`, { cause: error });
     }
   },
 };

@@ -11,7 +11,7 @@ export function ProductImage({ product, eager = false }: { product: Product; eag
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
   if (!product.image_url || failedUrl === product.image_url) {
     return <div className="image-fallback" role="img" aria-label={`Image unavailable for ${product.name}`}>
-      <span className="product-placeholder-mark" aria-hidden="true">m.</span>
+      <span className="product-placeholder-mark" aria-hidden="true">V.</span>
       <span className="product-placeholder-business">{product.business_name}</span>
       <span className="product-placeholder-category">{product.category || 'Product collection'}</span>
     </div>;

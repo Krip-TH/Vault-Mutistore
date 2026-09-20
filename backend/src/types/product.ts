@@ -21,3 +21,17 @@ export interface NormalizedProduct {
   image_url: string;
   updated_at: string;
 }
+
+export type BusinessAvailabilityStatus = 'online' | 'unavailable';
+
+export interface BusinessAvailability {
+  business: BusinessType;
+  business_name: string;
+  status: BusinessAvailabilityStatus;
+  product_count: number;
+}
+
+export interface ProductAggregation {
+  products: NormalizedProduct[];
+  businesses: BusinessAvailability[];
+}

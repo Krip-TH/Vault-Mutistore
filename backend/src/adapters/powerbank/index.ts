@@ -57,7 +57,7 @@ export function normalizeProduct(sourceProduct: unknown): NormalizedProduct {
   };
 }
 
-function extractProductList(payload: unknown): unknown[] {
+function extractProductList(payload: unknown): unknown[] | undefined {
   if (Array.isArray(payload)) {
     return payload;
   }
@@ -71,7 +71,7 @@ function extractProductList(payload: unknown): unknown[] {
 
   const products = envelope?.products;
 
-  return Array.isArray(products) ? products : [];
+  return Array.isArray(products) ? products : undefined;
 }
 
 export const powerbankAdapter: ProductAdapter = {
@@ -88,11 +88,12 @@ export const powerbankAdapter: ProductAdapter = {
         throw new Error(`Powerbank API responded with ${response.status} ${response.statusText}`);
       }
 
-      return extractProductList(await response.json()).map(normalizeProduct);
+      const products = extractProductList(await response.json());
+      if (!products) throw new Error('Powerbank API response must contain a product array');
+      return products.map(normalizeProduct);
     } catch (error) {
-      // Report this business failure while allowing aggregation to continue.
-      console.error(`[powerbank] Product request failed (${url}):`, error);
-      return [];
+      const detail = error instanceof Error ? error.message : 'unknown upstream error';
+      throw new Error(`Powerbank API request failed: ${detail}`, { cause: error });
     }
   },
 };

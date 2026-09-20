@@ -29,4 +29,12 @@ export interface Product {
 export interface ProductsResponse {
   data: Product[];
   source: string;
+  businesses?: BusinessAvailability[];
+}
+
+export interface BusinessAvailability {
+  business: BusinessType;
+  business_name: string;
+  status: 'online' | 'unavailable';
+  product_count: number;
 }

@@ -48,7 +48,7 @@ export function normalizeProduct(sourceProduct: unknown): NormalizedProduct {
   };
 }
 
-function extractProductList(payload: unknown): unknown[] {
+function extractProductList(payload: unknown): unknown[] | undefined {
   // The live API responds with a bare JSON array. API_CONTRACT.md also allows a
   // `data` wrapper, so accept that shape too.
   if (Array.isArray(payload)) {
@@ -57,7 +57,7 @@ function extractProductList(payload: unknown): unknown[] {
 
   const data = (payload as Record<string, unknown> | null)?.data;
 
-  return Array.isArray(data) ? data : [];
+  return Array.isArray(data) ? data : undefined;
 }
 
 export const brandnameAdapter: ProductAdapter = {
@@ -77,11 +77,12 @@ export const brandnameAdapter: ProductAdapter = {
         throw new Error(`Brandname API responded with ${response.status} ${response.statusText}`);
       }
 
-      return extractProductList(await response.json()).map(normalizeProduct);
+      const products = extractProductList(await response.json());
+      if (!products) throw new Error('Brandname API response must contain a product array');
+      return products.map(normalizeProduct);
     } catch (error) {
-      // Report this business failure while allowing aggregation to continue.
-      console.error(`[brandname] Product request failed (${url}):`, error);
-      return [];
+      const detail = error instanceof Error ? error.message : 'unknown upstream error';
+      throw new Error(`Brandname API request failed: ${detail}`, { cause: error });
     }
   },
 };
