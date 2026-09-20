@@ -39,7 +39,20 @@ export async function loginAccount(form: LoginForm, fetcher: Fetcher = fetch): P
 }
 
 export async function logoutAccount(fetcher: Fetcher = fetch): Promise<void> {
-  await fetcher('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
+  const response = await fetcher('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
+  if (!response.ok) throw new Error('Unable to sign out. Please try again.');
+}
+
+export async function loginAdminAccount(form: LoginForm, fetcher: Fetcher = fetch): Promise<User> {
+  const user = await loginAccount(form, fetcher);
+  if (user.role === 'admin') return user;
+
+  try {
+    await logoutAccount(fetcher);
+  } catch {
+    // Access remains denied even if the server cannot acknowledge session cleanup.
+  }
+  throw new Error('This account does not have administrator access.');
 }
 
 export async function fetchCurrentUser(fetcher: Fetcher = fetch): Promise<User | null> {
