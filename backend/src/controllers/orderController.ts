@@ -4,7 +4,7 @@ import { createOrder, getOrder, listOrders } from '../services/orderService.js';
 
 export async function postOrder(request: Request, response: Response): Promise<void> {
   try {
-    const order = await createOrder(request.body);
+    const order = await createOrder(request.auth!.userId, request.body);
     response.status(201).json({ data: order });
   } catch (error) {
     sendOrderError(response, error);
@@ -13,16 +13,16 @@ export async function postOrder(request: Request, response: Response): Promise<v
 
 export async function getOrderByNumber(request: Request, response: Response): Promise<void> {
   try {
-    const order = await getOrder(String(request.params.orderNo || ''));
+    const order = await getOrder(request.auth!.userId, String(request.params.orderNo || ''));
     response.json({ data: order });
   } catch (error) {
     sendOrderError(response, error);
   }
 }
 
-export async function getOrders(_request: Request, response: Response): Promise<void> {
+export async function getOrders(request: Request, response: Response): Promise<void> {
   try {
-    response.json({ data: await listOrders() });
+    response.json({ data: await listOrders(request.auth!.userId) });
   } catch (error) {
     sendOrderError(response, error);
   }

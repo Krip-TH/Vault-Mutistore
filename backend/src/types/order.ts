@@ -63,4 +63,6 @@ export interface OrderSummary {
   created_at: string;
 }
 
-export interface NewOrder extends Omit<Order, 'created_at' | 'updated_at'> {}
+export interface NewOrder extends Omit<Order, 'created_at' | 'updated_at'> {
+  user_id: number;
+}

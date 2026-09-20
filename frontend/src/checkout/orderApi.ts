@@ -14,6 +14,7 @@ async function errorMessage(response: Response, fallback: string) {
 export async function placeOrder(request: CreateOrderRequest, fetcher: Fetcher = fetch): Promise<Order> {
   const response = await fetcher('/api/orders', {
     method: 'POST',
+    credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
     body: JSON.stringify(request),
   });
@@ -35,6 +36,7 @@ export async function completeCheckout(
 
 export async function fetchOrder(orderNo: string, fetcher: Fetcher = fetch): Promise<Order> {
   const response = await fetcher(`/api/orders/${encodeURIComponent(orderNo)}`, {
+    credentials: 'same-origin',
     headers: { Accept: 'application/json' },
   });
   if (!response.ok) throw new Error(await errorMessage(response, 'Unable to retrieve the saved order.'));
@@ -44,7 +46,10 @@ export async function fetchOrder(orderNo: string, fetcher: Fetcher = fetch): Pro
 }
 
 export async function fetchOrders(fetcher: Fetcher = fetch) {
-  const response = await fetcher('/api/orders', { headers: { Accept: 'application/json' } });
+  const response = await fetcher('/api/orders', {
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json' },
+  });
   if (!response.ok) throw new Error(await errorMessage(response, 'Unable to load order history. Please try again.'));
   const payload = await response.json() as Partial<OrdersResponse>;
   if (!Array.isArray(payload.data)) throw new Error('The order history response was incomplete.');
