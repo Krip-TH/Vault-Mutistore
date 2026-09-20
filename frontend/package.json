@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.node.json && vite build",
+    "test": "tsx --tsconfig tsconfig.app.json --test tests/*.test.ts tests/*.test.tsx",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -19,6 +20,7 @@
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.16",
+    "tsx": "^4.19.2",
     "typescript": "^5.6.3",
     "vite": "^8.2.2"
   }

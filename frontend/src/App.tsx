@@ -7,9 +7,11 @@ import Checkout from './components/Checkout';
 import OrderHistory from './components/OrderHistory';
 import AccountMenu from './components/AccountMenu';
 import AuthDialog from './components/AuthDialog';
+import AdminDashboard from './components/AdminDashboard';
 import { useAuth } from './auth/AuthContext';
 import { useCart } from './cart/CartContext';
 import { textValue } from './utils/product';
+import type { AdminView } from './types/admin';
 
 const businessOptions: Array<{ value: BusinessType; label: string }> = [
   { value: 'door', label: 'Door' },
@@ -52,6 +54,8 @@ function App() {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [ordersOpen, setOrdersOpen] = useState(false);
   const [selectedOrderNo, setSelectedOrderNo] = useState<string | undefined>();
+  const [adminOpen, setAdminOpen] = useState(false);
+  const [adminView, setAdminView] = useState<AdminView>('dashboard');
 
   useEffect(() => {
     const controller = new AbortController();
@@ -103,8 +107,25 @@ function App() {
       setCheckoutOpen(false);
       setOrdersOpen(false);
       setSelectedOrderNo(undefined);
+      setAdminOpen(false);
     }
   }, [auth.loading, auth.user]);
+  useEffect(() => {
+    function syncAdminRoute() {
+      if (!window.location.hash.startsWith('#admin') || auth.loading) return;
+      if (auth.user?.role === 'admin') {
+        setAdminView(window.location.hash === '#admin/orders' ? 'orders' : 'dashboard');
+        setAdminOpen(true);
+        return;
+      }
+      setAdminOpen(false);
+      window.history.replaceState(null, '', '#home');
+      if (!auth.user) auth.openLogin();
+    }
+    syncAdminRoute();
+    window.addEventListener('hashchange', syncAdminRoute);
+    return () => window.removeEventListener('hashchange', syncAdminRoute);
+  }, [auth.loading, auth.openLogin, auth.user]);
 
   const categories = useMemo(
     () => [...new Set(products.map((product) => textValue(product.category)).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
@@ -162,6 +183,18 @@ function App() {
     setCheckoutOpen(true);
   }
 
+  function openAdmin(view: AdminView) {
+    if (auth.user?.role !== 'admin') return;
+    setAdminView(view);
+    setAdminOpen(true);
+    window.history.replaceState(null, '', view === 'orders' ? '#admin/orders' : '#admin');
+  }
+
+  function closeAdmin() {
+    setAdminOpen(false);
+    window.history.replaceState(null, '', '#home');
+  }
+
   const [selection, setSelected] = useState<Product | null>(null);
   const currentSelection = selection ? products.find(product => productKey(product) === productKey(selection)) : undefined;
   const selected = currentSelection ?? selection;
@@ -174,7 +207,7 @@ function App() {
       <header className="site-header">
         <a className="brand" href="#home"><span className="brand-symbol">V.</span><span>VAULT</span></a>
         <nav className="desktop-nav" aria-label="Main navigation"><a href="#home">Home</a><a href="#explore">Explore</a><a href="#businesses">Businesses</a><button onClick={() => openOrders()}>Orders</button></nav>
-        <div className="header-actions"><a href="#search">Search <span aria-hidden="true">⌕</span></a><a className="inventory-link" href="#inventory">Inventory <span>{loading || error ? '—' : summary.total}</span></a><button className="header-cart" onClick={cart.openCart} aria-label={`Open cart with ${cart.itemCount} items`}>Cart <span>{cart.itemCount}</span></button><AccountMenu /></div>
+        <div className="header-actions"><a href="#search">Search <span aria-hidden="true">⌕</span></a><a className="inventory-link" href="#inventory">Inventory <span>{loading || error ? '—' : summary.total}</span></a><button className="header-cart" onClick={cart.openCart} aria-label={`Open cart with ${cart.itemCount} items`}>Cart <span>{cart.itemCount}</span></button><AccountMenu onAdmin={() => openAdmin('dashboard')} /></div>
       </header>
       <main className="page-shell">
         <section className="hero" aria-labelledby="hero-title">
@@ -216,6 +249,8 @@ function App() {
       {ordersOpen && <OrderHistory key={selectedOrderNo || 'history'} initialOrderNo={selectedOrderNo}
         onClose={() => { setOrdersOpen(false); setSelectedOrderNo(undefined); }} />}
       {auth.isAuthOpen && <AuthDialog onClose={auth.closeAuth} />}
+      {adminOpen && auth.user?.role === 'admin' && <AdminDashboard view={adminView}
+        onViewChange={openAdmin} onClose={closeAdmin} />}
     </div>
   );
 }
