@@ -76,7 +76,7 @@ function OrderList({ orders, loading, error, onRetry, onOpen }: {
     <div className="orders-intro"><p className="eyebrow">YOUR ORDERS</p><h2 id="orders-title">Order history.</h2><p>Review saved orders and open any purchase for its complete details.</p></div>
     {loading && <div className="orders-state" role="status"><span className="orders-loader" /><h3>Gathering your orders…</h3></div>}
     {!loading && error && <div className="orders-state" role="alert"><h3>We couldn’t load your orders.</h3><p>{error}</p><button className="primary-button" onClick={onRetry}>Try again</button></div>}
-    {!loading && !error && orders.length === 0 && <div className="orders-state"><span className="orders-empty-mark">m.</span><h3>No orders yet.</h3><p>Your confirmed purchases will appear here.</p></div>}
+    {!loading && !error && orders.length === 0 && <div className="orders-state"><span className="orders-empty-mark">V.</span><h3>No orders yet.</h3><p>Your confirmed purchases will appear here.</p></div>}
     {!loading && !error && orders.length > 0 && <div className="orders-list">{orders.map(summary => <button key={summary.order_no} className="order-row" onClick={() => onOpen(summary.order_no)}>
       <span className="order-row-primary"><small>Order number</small><strong>{summary.order_no}</strong><time dateTime={summary.created_at}>{dateTime.format(new Date(summary.created_at))}</time></span>
       <span><small>Total</small><strong>{price.format(summary.total)}</strong></span>

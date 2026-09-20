@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { BusinessType, Product, ProductsResponse, StockStatus } from './types/product';
+import type { BusinessAvailability, BusinessType, Product, ProductsResponse, StockStatus } from './types/product';
 import { ProductCard, ProductImage } from './components/ProductPresentation';
 import ProductDetail from './components/ProductDetail';
 import CartDrawer from './components/CartDrawer';
@@ -44,6 +44,7 @@ function App() {
     try { sessionStorage.setItem('moodeng-shopping', JSON.stringify(favorites)); } catch { /* Favorites remain usable in memory. */ }
   }, [favorites]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [availability, setAvailability] = useState<BusinessAvailability[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [requestVersion, setRequestVersion] = useState(0);
@@ -81,12 +82,14 @@ function App() {
         }
 
         setProducts(payload.data);
+        setAvailability(Array.isArray(payload.businesses) ? payload.businesses : []);
       } catch (requestError) {
         if (requestError instanceof DOMException && requestError.name === 'AbortError') {
           return;
         }
 
         setProducts([]);
+        setAvailability([]);
         setError(requestError instanceof Error ? requestError.message : 'Unable to load products.');
       } finally {
         if (!controller.signal.aborted) {
@@ -201,6 +204,8 @@ function App() {
   const inventoryAvailable = !loading && !error && !!currentSelection;
   const featured = products.find(product => product.image_url && product.stock > 0);
   const missing = businessOptions.filter(option => !products.some(product => product.business === option.value));
+  const unavailable = availability.filter(item => item.status === 'unavailable');
+  const emptyBusinesses = availability.filter(item => item.status === 'online' && item.product_count === 0);
   return (
     <div id="home">
       <a className="skip-link" href="#explore">Skip to products</a>
@@ -226,7 +231,9 @@ function App() {
             <label className="select-field"><span>Availability</span><select value={stockStatus} onChange={event => setStockStatus(event.target.value as StockStatus | 'all')}><option value="all">All stock statuses</option>{stockStatuses.map(value => <option key={value} value={value}>{value}</option>)}</select></label>
           </div>
           <div className="results-toolbar"><p role="status">{loading ? 'Gathering the collection…' : error ? 'Collection unavailable' : `${filteredProducts.length} of ${products.length} products`}</p><div>{hasActiveFilters && <button className="text-button" onClick={clearFilters}>Clear filters</button>}<button className="text-button" disabled={loading} onClick={() => setRequestVersion(version => version + 1)}>Refresh inventory</button></div></div>
-          {!loading && !error && missing.length > 0 && <p className="availability-note">No products in this response from {missing.map(option => option.label).join(', ')}. Refresh to check again.</p>}
+          {!loading && !error && unavailable.length > 0 && <p className="availability-note">Temporarily unavailable: {unavailable.map(item => item.business_name).join(', ')}. Available businesses remain browsable.</p>}
+          {!loading && !error && emptyBusinesses.length > 0 && <p className="availability-note">Online with no products: {emptyBusinesses.map(item => item.business_name).join(', ')}.</p>}
+          {!loading && !error && availability.length === 0 && missing.length > 0 && <p className="availability-note">No products in this response from {missing.map(option => option.label).join(', ')}. Refresh to check again.</p>}
           <div aria-busy={loading}>
             {loading && <div className="product-grid" aria-label="Loading products">{Array.from({ length: 6 }, (_, index) => <div className="skeleton-card" key={index}><div /><span /><span /></div>)}</div>}
             {!loading && error && <div className="empty-state" role="alert"><p className="eyebrow">LET’S TRY THAT AGAIN</p><h3>The collection is taking a moment.</h3><p>{error}</p><button className="primary-button" onClick={() => setRequestVersion(version => version + 1)}>Try again ↗</button></div>}

@@ -39,7 +39,7 @@ export default function CartDrawer({ onExplore, onCheckout }: { onExplore: () =>
         <button className="cart-close" onClick={cart.closeCart} aria-label="Close cart" autoFocus>×</button>
       </header>
       {cart.items.length === 0 ? <div className="cart-empty">
-        <span className="cart-empty-mark" aria-hidden="true">m.</span>
+        <span className="cart-empty-mark" aria-hidden="true">V.</span>
         <h3>Your cart is empty.</h3>
         <p>Explore the collection and find something for your everyday.</p>
         <button className="primary-button" onClick={() => { cart.closeCart(); onExplore(); }}>Explore the collection <span aria-hidden="true">↗</span></button>

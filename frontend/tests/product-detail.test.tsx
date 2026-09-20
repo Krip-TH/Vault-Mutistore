@@ -101,8 +101,8 @@ test('image_url-only products show one intentional main view with a loading plac
 });
 
 test('live products render collection cards and the matching details through the frontend API proxy', async context => {
-  const url = process.env.MOODENG_TEST_API_URL;
-  if (!url) { context.skip('Set MOODENG_TEST_API_URL to test a running frontend proxy.'); return; }
+  const url = process.env.VAULT_TEST_API_URL;
+  if (!url) { context.skip('Set VAULT_TEST_API_URL to test a running frontend proxy.'); return; }
   const response = await fetch(url, { signal: AbortSignal.timeout(30000) });
   assert.equal(response.status, 200);
   const payload = await response.json() as ProductsResponse;

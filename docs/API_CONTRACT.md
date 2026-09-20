@@ -67,16 +67,16 @@ The backend adapter should calculate `status` with the shared `getStockStatus` h
 
 ## Mapping example: Door
 
-The Door API may return:
+The Door API returns fields such as:
 
 ```json
 {
-  "ProductID": 12,
-  "ProductName": "Modern Walnut Entrance Door",
-  "CategoryName": "Door",
-  "Price": "24500.00",
-  "StockQuantity": 5,
-  "ImageURL": "/images/door12.jpg"
+  "product_id": 12,
+  "product_name": "Modern Walnut Entrance Door",
+  "category_name": "Door",
+  "price": "24500.00",
+  "total_stock": 5,
+  "image_url": "/images/door12.jpg"
 }
 ```
 
@@ -84,12 +84,12 @@ The Door adapter maps fields and converts values as follows:
 
 | Source field | Normalized field | Conversion |
 | --- | --- | --- |
-| `ProductID` | `id` | Convert to string |
-| `ProductName` | `name` | Use as text |
-| `CategoryName` | `category` | Use as text |
-| `Price` | `price` | Convert to number |
-| `StockQuantity` | `stock` | Convert to number |
-| `ImageURL` | `image_url` | Use as text |
+| `product_id` | `id` | Convert to string |
+| `product_name` | `name` | Use as text |
+| `category_name` | `category` | Use as text |
+| `price` | `price` | Convert to number |
+| `total_stock` | `stock` | Convert to number |
+| `image_url` | `image_url` | Use as text |
 
 Normalized output:
 
@@ -111,7 +111,7 @@ Normalized output:
 
 ## Mapping example: Powerbank
 
-The Powerbank Stock Product API (see [powerbank-api/README.md](../powerbank-api/README.md)) returns:
+The Powerbank Stock Product API returns:
 
 ```json
 {
@@ -185,6 +185,33 @@ The adapter must handle the source API's actual response shape. Each member's AP
 - Be reachable by the VAULT — Multi-Store Marketplace Application backend.
 - Have its API URL shared with the group.
 - Keep secret passwords, tokens, and database credentials out of GitHub.
+
+## Aggregated product response and availability
+
+`GET /api/products` wraps normalized products in `data` and includes one availability record per adapter:
+
+```json
+{
+  "data": [],
+  "businesses": [
+    {
+      "business": "door",
+      "business_name": "Door",
+      "status": "online",
+      "product_count": 0
+    },
+    {
+      "business": "plug",
+      "business_name": "Electrical Plug",
+      "status": "unavailable",
+      "product_count": 0
+    }
+  ],
+  "source": "adapters"
+}
+```
+
+`online` with `product_count: 0` means the upstream responded successfully with no usable products. `unavailable` means the request failed or its response could not be parsed. Failure of one adapter does not remove products returned by other adapters.
 
 ## Information each member must send to the integration owner
 
