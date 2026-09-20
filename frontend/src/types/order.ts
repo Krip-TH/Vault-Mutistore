@@ -1,5 +1,7 @@
 import type { BusinessType } from './product';
 
+export type OrderStatus = 'pending' | 'confirmed' | 'processing' | 'shipped' | 'completed' | 'cancelled';
+
 export interface CheckoutForm {
   name: string;
   email: string;
@@ -39,7 +41,7 @@ export interface Order {
   shipping_fee: number;
   discount: number;
   total: number;
-  status: string;
+  status: OrderStatus;
   created_at: string;
   updated_at: string;
 }
@@ -47,7 +49,7 @@ export interface Order {
 export interface OrderSummary {
   order_no: string;
   total: number;
-  status: string;
+  status: OrderStatus;
   item_count: number;
   created_at: string;
 }

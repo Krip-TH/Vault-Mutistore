@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 
-export default function AccountMenu() {
+export default function AccountMenu({ onAdmin }: { onAdmin: () => void }) {
   const { user, loading, openLogin, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -32,6 +32,7 @@ export default function AccountMenu() {
       <p><strong>{user.name}</strong><span>{user.email}</span>
         {user.role === 'admin' && <span className="account-role">Admin</span>}
       </p>
+      {user.role === 'admin' && <button role="menuitem" onClick={() => { setMenuOpen(false); onAdmin(); }}>Admin dashboard</button>}
       <button role="menuitem" onClick={() => { setMenuOpen(false); void logout(); }}>Log out</button>
     </div>}
   </div>;

@@ -155,6 +155,12 @@ Run `npm install` and `npm run dev` separately in `frontend` and `backend`. Copy
 | POST | `/api/orders` | Validate live inventory and create an order |
 | GET | `/api/orders` | List the 100 newest saved orders |
 | GET | `/api/orders/:orderNo` | Retrieve a saved order by public order number |
+| GET | `/api/admin/dashboard` | Admin-only order and customer statistics |
+| GET | `/api/admin/orders` | Admin-only list of all customer orders |
+| GET | `/api/admin/orders/:orderNo` | Admin-only order details |
+| PATCH | `/api/admin/orders/:orderNo/status` | Admin-only validated status update |
+
+All `/api/admin/*` endpoints require an authenticated account whose signed session role is `admin`.
 
 ## Team development workflow
 

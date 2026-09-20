@@ -3,6 +3,7 @@ import { getBusinesses, getHealth, getProducts, getStockSummary } from '../contr
 import { getMe, postLogin, postLogout, postRegister } from '../controllers/authController.js';
 import { getOrderByNumber, getOrders, postOrder } from '../controllers/orderController.js';
 import { attachUser, requireAuth } from '../middleware/auth.js';
+import { createAdminRouter } from './admin.js';
 
 const router = Router();
 router.use(attachUser);
@@ -17,4 +18,5 @@ router.post('/auth/register', postRegister);
 router.post('/auth/login', postLogin);
 router.post('/auth/logout', postLogout);
 router.get('/auth/me', getMe);
+router.use('/admin', createAdminRouter());
 export default router;
