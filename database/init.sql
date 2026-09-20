@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS products_cache (
   stock INT NOT NULL DEFAULT 0,
   unit VARCHAR(50) NOT NULL DEFAULT 'pcs',
   status VARCHAR(50) NOT NULL DEFAULT 'active',
-  image_url VARCHAR(2048) NULL,
+  image_url TEXT NULL,
   attributes JSON NULL,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
@@ -79,7 +79,7 @@ CREATE TABLE IF NOT EXISTS order_items (
   business_name VARCHAR(120) NOT NULL,
   product_name VARCHAR(255) NOT NULL,
   category VARCHAR(120) NULL,
-  image_url VARCHAR(2048) NULL,
+  image_url TEXT NULL,
   unit_price DECIMAL(12, 2) NOT NULL,
   quantity INT UNSIGNED NOT NULL,
   line_total DECIMAL(12, 2) NOT NULL,
@@ -91,6 +91,18 @@ CREATE TABLE IF NOT EXISTS order_items (
     ON UPDATE CASCADE ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
+CREATE TABLE IF NOT EXISTS users (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  name VARCHAR(160) NOT NULL,
+  email VARCHAR(254) NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  role ENUM('customer', 'admin') NOT NULL DEFAULT 'customer',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_users_email (email)
+) ENGINE=InnoDB;
+
 INSERT INTO businesses (name, business_type, status) VALUES
   ('Door Business', 'Door', 'inactive'),
   ('Electrical Plug Business', 'Electrical Plug', 'inactive'),
@@ -98,4 +110,9 @@ INSERT INTO businesses (name, business_type, status) VALUES
   ('Clothing Business', 'Clothing', 'inactive'),
   ('Powerbank Business', 'Powerbank', 'inactive'),
   ('Projector Business', 'Projector', 'inactive')
+ON DUPLICATE KEY UPDATE name = VALUES(name);
+
+-- Default admin account. Password: Admin@12345 (change after first login in a real deployment).
+INSERT INTO users (name, email, password_hash, role) VALUES
+  ('Moodeng Admin', 'admin@moodeng.com', '$2a$10$6waAXvUSTM0TEJrtSHWvs.Z5PDgC7EgAinaJuae0q.xpv7ZHy87za', 'admin')
 ON DUPLICATE KEY UPDATE name = VALUES(name);
