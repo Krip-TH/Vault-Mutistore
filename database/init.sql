@@ -1,5 +1,5 @@
-CREATE DATABASE IF NOT EXISTS moodeng_multistore CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE moodeng_multistore;
+CREATE DATABASE IF NOT EXISTS vault_multistore CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE vault_multistore;
 
 CREATE TABLE IF NOT EXISTS businesses (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
