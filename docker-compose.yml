@@ -73,3 +73,5 @@ volumes:
   frontend_node_modules:
   backend_node_modules:
   mysql_data:
+    external: true
+    name: moodengmultistore_mysql_data
