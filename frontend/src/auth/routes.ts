@@ -1,7 +1,7 @@
 import type { User } from '../types/auth';
 
-export type AppRoute = 'login' | 'register' | 'admin-login' | 'home' | 'products' | 'cart' | 'orders' | 'profile'
-  | 'admin' | 'admin-products' | 'admin-orders' | 'admin-users' | 'admin-businesses';
+export type AppRoute = 'login' | 'register' | 'admin-login' | 'home' | 'products' | 'cart' | 'orders' | 'claims' | 'profile'
+  | 'admin' | 'admin-products' | 'admin-orders' | 'admin-claims' | 'admin-users' | 'admin-businesses';
 
 const hashes: Record<AppRoute, string> = {
   login: '#/login',
@@ -11,17 +11,19 @@ const hashes: Record<AppRoute, string> = {
   products: '#/products',
   cart: '#/cart',
   orders: '#/orders',
+  claims: '#/claims',
   profile: '#/profile',
   admin: '#/admin',
   'admin-products': '#/admin/products',
   'admin-orders': '#/admin/orders',
+  'admin-claims': '#/admin/claims',
   'admin-users': '#/admin/users',
   'admin-businesses': '#/admin/businesses',
 };
 
 const legacyHashes: Partial<Record<string, AppRoute>> = {
-  '#login': 'login', '#register': 'register', '#home': 'home', '#products': 'products', '#cart': 'cart', '#orders': 'orders', '#profile': 'profile',
-  '#admin': 'admin', '#admin/products': 'admin-products', '#admin/orders': 'admin-orders', '#admin/users': 'admin-users', '#admin/businesses': 'admin-businesses',
+  '#login': 'login', '#register': 'register', '#home': 'home', '#products': 'products', '#cart': 'cart', '#orders': 'orders', '#claims': 'claims', '#profile': 'profile',
+  '#admin': 'admin', '#admin/products': 'admin-products', '#admin/orders': 'admin-orders', '#admin/claims': 'admin-claims', '#admin/users': 'admin-users', '#admin/businesses': 'admin-businesses',
 };
 
 export function parseRoute(hash: string): AppRoute {

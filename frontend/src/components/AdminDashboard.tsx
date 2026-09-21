@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-  fetchAdminAnalytics, fetchAdminOrder, fetchAdminOrders, updateAdminOrderStatus,
+  fetchAdminAnalytics, fetchAdminClaimStats, fetchAdminOrder, fetchAdminOrders, updateAdminOrderStatus,
 } from '../admin/adminApi';
 import type { AdminAnalytics as AdminAnalyticsData, AdminOrder, AdminOrderSummary, AdminView } from '../types/admin';
+import type { ClaimStats } from '../types/claim';
 import type { OrderStatus } from '../types/order';
 import { useAuth } from '../auth/AuthContext';
 import { adminNavigation } from '../navigation';
 import AdminProducts from './AdminProducts';
+import AdminClaims from './AdminClaims';
 import { HamburgerButton, NavigationDrawer } from './NavigationDrawer';
 import {AdminBusinesses,AdminUsers} from './AdminManagement';
 import AdminAnalytics from './AdminAnalytics';
@@ -14,7 +16,7 @@ import AdminAnalytics from './AdminAnalytics';
 const price = new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' });
 const dateTime = new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short' });
 const statuses: OrderStatus[] = ['pending', 'confirmed', 'processing', 'shipped', 'completed', 'cancelled'];
-const adminTitles: Record<AdminView, string> = { dashboard: 'Dashboard', products: 'Products', orders: 'Orders', users: 'Users', businesses: 'Businesses' };
+const adminTitles: Record<AdminView, string> = { dashboard: 'Dashboard', products: 'Products', orders: 'Orders', claims: 'Claims', users: 'Users', businesses: 'Businesses' };
 
 export default function AdminDashboard({ view, onViewChange, onClose, onLogout }: {
   view: AdminView;
@@ -24,6 +26,7 @@ export default function AdminDashboard({ view, onViewChange, onClose, onLogout }
 }) {
   const { user } = useAuth();
   const [dashboard, setDashboard] = useState<AdminAnalyticsData | null>(null);
+  const [claimStats, setClaimStats] = useState<ClaimStats | null>(null);
   const [orders, setOrders] = useState<AdminOrderSummary[]>([]);
   const [selected, setSelected] = useState<AdminOrder | null>(null);
   const [loading, setLoading] = useState(true);
@@ -38,8 +41,15 @@ export default function AdminDashboard({ view, onViewChange, onClose, onLogout }
     setError('');
     setSelected(null);
     try {
-      if (view === 'dashboard') setDashboard(await fetchAdminAnalytics());
-      else if (view === 'orders') setOrders(await fetchAdminOrders());
+      if (view === 'dashboard') {
+        // Claim statistics are supplementary: the dashboard still renders if they fail.
+        const [analytics, claims] = await Promise.all([
+          fetchAdminAnalytics(),
+          fetchAdminClaimStats().catch(() => null),
+        ]);
+        setDashboard(analytics);
+        setClaimStats(claims);
+      } else if (view === 'orders') setOrders(await fetchAdminOrders());
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'Unable to load admin data.');
     } finally { setLoading(false); }
@@ -80,15 +90,43 @@ export default function AdminDashboard({ view, onViewChange, onClose, onLogout }
             setOrders(current => current.map(item => item.order_no === order.order_no ? { ...item, status: order.status } : item));
             if (dashboard) void fetchAdminAnalytics().then(setDashboard).catch(() => { /* Detail remains usable if refresh fails. */ });
           }} />}
-        {!loading && !error && !selected && view === 'dashboard' && dashboard &&
-          <AdminAnalytics data={dashboard} onOpen={orderNo => void openOrder(orderNo)} />}
+        {!loading && !error && !selected && view === 'dashboard' && dashboard && <>
+          {claimStats && <ClaimStatsPanel stats={claimStats} onOpenClaims={() => onViewChange('claims')} />}
+          <AdminAnalytics data={dashboard} onOpen={orderNo => void openOrder(orderNo)} />
+        </>}
         {!loading && !error && !selected && view === 'orders' &&
           <OrdersView orders={orders} onOpen={orderNo => void openOrder(orderNo)} />}
+        {!loading && !error && !selected && view === 'claims' && <AdminClaims />}
         {!loading && !error && !selected && view === 'products' && <AdminProducts />}
         {!loading && !error && !selected && view === 'users' && <AdminUsers />}
         {!loading && !error && !selected && view === 'businesses' && <AdminBusinesses />}
       </main>
     </div>
+  </div>;
+}
+
+/** After-sales health, shown above the sales analytics on the dashboard. */
+export function ClaimStatsPanel({ stats, onOpenClaims }: { stats: ClaimStats; onOpenClaims: () => void }) {
+  const tiles: Array<[string, number]> = [
+    ['Total claims', stats.total_claims],
+    ['Awaiting review', stats.submitted_claims + stats.under_review_claims],
+    ['In progress', stats.approved_claims + stats.processing_claims],
+    ['Completed', stats.completed_claims],
+    ['Rejected / cancelled', stats.rejected_claims + stats.cancelled_claims],
+  ];
+  return <div className="admin-content admin-claim-stats">
+    <section className="admin-section">
+      <div className="admin-section-heading">
+        <div><p className="eyebrow">AFTER-SALES</p><h3>Product claims</h3></div>
+        <button className="text-button" onClick={onOpenClaims}>Manage claims</button>
+      </div>
+      <section className="admin-metrics admin-order-metrics" aria-label="Claim statistics">
+        {tiles.map(([label, value]) => <article key={label}><span>{label}</span><strong>{value}</strong></article>)}
+      </section>
+      {stats.open_claims > 0 && <p className="admin-claim-alert" role="status">
+        {stats.open_claims} claim{stats.open_claims === 1 ? '' : 's'} still need attention.
+      </p>}
+    </section>
   </div>;
 }
 

@@ -7,6 +7,7 @@ import AiChatWidget from './components/AiChatWidget';
 import CartDrawer from './components/CartDrawer';
 import Checkout from './components/Checkout';
 import OrderHistory from './components/OrderHistory';
+import MyClaims from './components/MyClaims';
 import AccountMenu from './components/AccountMenu';
 import AuthPage from './components/AuthPage';
 import AdminDashboard from './components/AdminDashboard';
@@ -21,11 +22,12 @@ import CustomerProfile from './components/CustomerProfile';
 import { HamburgerButton, NavigationDrawer } from './components/NavigationDrawer';
 
 const adminViewByRoute: Partial<Record<AppRoute, AdminView>> = {
-  admin: 'dashboard', 'admin-products': 'products', 'admin-orders': 'orders',
+  admin: 'dashboard', 'admin-products': 'products', 'admin-orders': 'orders', 'admin-claims': 'claims',
   'admin-users': 'users', 'admin-businesses': 'businesses',
 };
 const adminRouteByView: Record<AdminView, AppRoute> = {
-  dashboard: 'admin', products: 'admin-products', orders: 'admin-orders', users: 'admin-users', businesses: 'admin-businesses',
+  dashboard: 'admin', products: 'admin-products', orders: 'admin-orders', claims: 'admin-claims',
+  users: 'admin-users', businesses: 'admin-businesses',
 };
 
 function App() {
@@ -115,10 +117,12 @@ function Storefront({ route, navigate }: { route: AppRoute; navigate: (route: Ap
   const [stockStatus, setStockStatus] = useState<StockStatus | 'all'>('all');
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [selectedOrderNo, setSelectedOrderNo] = useState<string | undefined>();
+  const [selectedClaimNumber, setSelectedClaimNumber] = useState<string | undefined>();
   const [navigationOpen, setNavigationOpen] = useState(false);
   const [navigationLogoutError, setNavigationLogoutError] = useState('');
   const closeNavigation = useCallback(() => setNavigationOpen(false), []);
   const ordersOpen = route === 'orders';
+  const claimsOpen = route === 'claims';
   const logoutDestination = auth.user ? routeAfterLogout(auth.user) : 'login';
 
   useEffect(() => {
@@ -172,6 +176,7 @@ function Storefront({ route, navigate }: { route: AppRoute; navigate: (route: Ap
     if (!auth.loading && !auth.user) {
       setCheckoutOpen(false);
       setSelectedOrderNo(undefined);
+      setSelectedClaimNumber(undefined);
     }
   }, [auth.loading, auth.user]);
   useEffect(() => {
@@ -293,7 +298,10 @@ function Storefront({ route, navigate }: { route: AppRoute; navigate: (route: Ap
         onContinue={() => document.querySelector('#explore')?.scrollIntoView({ behavior: 'smooth' })}
         onViewOrder={openOrders} />}
       {ordersOpen && <OrderHistory key={selectedOrderNo || 'history'} initialOrderNo={selectedOrderNo}
-        onClose={() => { setSelectedOrderNo(undefined); navigate('home'); }} />}
+        onClose={() => { setSelectedOrderNo(undefined); navigate('home'); }}
+        onViewClaim={claimNumber => { setSelectedOrderNo(undefined); setSelectedClaimNumber(claimNumber); navigate('claims'); }} />}
+      {claimsOpen && <MyClaims key={selectedClaimNumber || 'claims'} initialClaimNumber={selectedClaimNumber}
+        onClose={() => { setSelectedClaimNumber(undefined); navigate('home'); }} />}
       <AiChatWidget />
     </div>
   );
