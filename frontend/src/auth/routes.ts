@@ -1,6 +1,6 @@
 import type { User } from '../types/auth';
 
-export type AppRoute = 'login' | 'register' | 'admin-login' | 'home' | 'orders' | 'admin' | 'admin-orders';
+export type AppRoute = 'login' | 'register' | 'admin-login' | 'home' | 'orders' | 'admin' | 'admin-products' | 'admin-orders';
 
 const hashes: Record<AppRoute, string> = {
   login: '#/login',
@@ -9,12 +9,13 @@ const hashes: Record<AppRoute, string> = {
   home: '#/home',
   orders: '#/orders',
   admin: '#/admin',
+  'admin-products': '#/admin/products',
   'admin-orders': '#/admin/orders',
 };
 
 const legacyHashes: Partial<Record<string, AppRoute>> = {
   '#login': 'login', '#register': 'register', '#home': 'home', '#orders': 'orders',
-  '#admin': 'admin', '#admin/orders': 'admin-orders',
+  '#admin': 'admin', '#admin/products': 'admin-products', '#admin/orders': 'admin-orders',
 };
 
 export function parseRoute(hash: string): AppRoute {
@@ -35,11 +36,11 @@ export function routeAfterAuthentication(user: User): AppRoute {
 export function resolveProtectedRoute(route: AppRoute, user: User | null): AppRoute {
   if (!user) {
     if (route === 'register') return 'register';
-    if (route === 'admin-login' || route === 'admin' || route === 'admin-orders') return 'admin-login';
+    if (route === 'admin-login' || route === 'admin' || route === 'admin-products' || route === 'admin-orders') return 'admin-login';
     return 'login';
   }
   if (route === 'login' || route === 'register' || route === 'admin-login') return routeAfterAuthentication(user);
-  if ((route === 'admin' || route === 'admin-orders') && user.role !== 'admin') return 'home';
+  if ((route === 'admin' || route === 'admin-products' || route === 'admin-orders') && user.role !== 'admin') return 'home';
   return route;
 }
 

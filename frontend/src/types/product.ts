@@ -4,7 +4,8 @@ export type BusinessType =
   | 'brandname'
   | 'clothing'
   | 'powerbank'
-  | 'projector';
+  | 'projector'
+  | 'vault';
 
 export type StockStatus = 'In Stock' | 'Low Stock' | 'Out of Stock';
 

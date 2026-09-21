@@ -8,5 +8,6 @@ export const customerNavigation = [
 
 export const adminNavigation: ReadonlyArray<{ label: string; view: AdminView }> = [
   { label: 'Dashboard', view: 'dashboard' },
+  { label: 'Products', view: 'products' },
   { label: 'Orders', view: 'orders' },
 ];

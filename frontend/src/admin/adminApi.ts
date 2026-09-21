@@ -1,4 +1,4 @@
-import type { AdminDashboardData, AdminOrder, AdminOrderSummary } from '../types/admin';
+import type { AdminDashboardData, AdminOrder, AdminOrderSummary, AdminProduct, AdminProductInput, ProductOptions } from '../types/admin';
 import type { OrderStatus } from '../types/order';
 
 type ErrorResponse = { error?: { message?: string } };
@@ -38,4 +38,45 @@ export async function updateAdminOrderStatus(orderNo: string, status: OrderStatu
     headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
     body: JSON.stringify({ status }),
   }), 'Unable to update the order status.');
+}
+
+export async function fetchAdminProducts(fetcher: typeof fetch = fetch) {
+  return readData<AdminProduct[]>(await fetcher('/api/admin/products', options), 'Unable to load products.');
+}
+
+export async function fetchAdminProductOptions(fetcher: typeof fetch = fetch) {
+  return readData<ProductOptions>(await fetcher('/api/admin/product-options', options), 'Unable to load product businesses and categories.');
+}
+
+export async function fetchAdminProduct(business: string, id: string, fetcher: typeof fetch = fetch) {
+  return readData<AdminProduct>(await fetcher(`/api/admin/products/${encodeURIComponent(business)}/${encodeURIComponent(id)}`, options), 'Unable to load this product.');
+}
+
+export async function createAdminProduct(input: AdminProductInput, fetcher: typeof fetch = fetch) {
+  return readData<AdminProduct>(await fetcher('/api/admin/products', {
+    method: 'POST', credentials: 'same-origin', headers: { Accept: 'application/json', 'Content-Type': 'application/json' }, body: JSON.stringify(input),
+  }), 'Unable to create the product.');
+}
+
+export async function updateAdminProduct(product: AdminProduct, input: AdminProductInput, fetcher: typeof fetch = fetch) {
+  return readData<AdminProduct>(await fetcher(`/api/admin/products/${encodeURIComponent(product.business)}/${encodeURIComponent(product.id)}`, {
+    method: 'PUT', credentials: 'same-origin', headers: { Accept: 'application/json', 'Content-Type': 'application/json' }, body: JSON.stringify(input),
+  }), 'Unable to update the product.');
+}
+
+export async function deleteAdminProduct(product: AdminProduct, fetcher: typeof fetch = fetch) {
+  const response = await fetcher(`/api/admin/products/${encodeURIComponent(product.business)}/${encodeURIComponent(product.id)}`, {
+    method: 'DELETE', credentials: 'same-origin', headers: { Accept: 'application/json' },
+  });
+  if (!response.ok) await readData<never>(response, 'Unable to delete the product.');
+}
+
+export async function uploadAdminProductImage(file: File, fetcher: typeof fetch = fetch) {
+  const body = new FormData();
+  body.append('image', file);
+  const data = await readData<{ image_url: string }>(await fetcher('/api/admin/products/upload-image', {
+    method: 'POST', credentials: 'same-origin', headers: { Accept: 'application/json' }, body,
+  }), 'Unable to upload the image.');
+  if (!data.image_url) throw new Error('The image upload response was incomplete.');
+  return data.image_url;
 }

@@ -3,6 +3,7 @@ import { adapters } from '../adapters/index.js';
 import { ApiError } from '../errors/apiError.js';
 import { orderRepository } from '../repositories/orderRepository.js';
 import type { OrderRepository } from '../repositories/orderRepository.js';
+import { productRepository } from '../repositories/productRepository.js';
 import type { BusinessType, NormalizedProduct } from '../types/product.js';
 import type { CreateOrderItemRequest, CreateOrderRequest, NewOrder, Order, OrderSummary } from '../types/order.js';
 
@@ -15,7 +16,7 @@ export interface OrderServiceDependencies {
   randomSuffix: () => string;
 }
 
-const businessTypes = new Set<BusinessType>(Object.keys(adapters) as BusinessType[]);
+const businessTypes = new Set<BusinessType>([...Object.keys(adapters) as BusinessType[], 'vault']);
 
 export async function createOrder(
   userId: number,
@@ -144,7 +145,7 @@ function validateItem(item: CreateOrderItemRequest, products: NormalizedProduct[
 }
 
 async function loadBusinessProducts(business: BusinessType) {
-  return adapters[business].getProducts();
+  return business === 'vault' ? productRepository.list() : adapters[business].getProducts();
 }
 
 function createOrderNo(date: Date, suffix: string) {
