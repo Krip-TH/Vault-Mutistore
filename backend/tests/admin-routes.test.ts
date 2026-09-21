@@ -123,6 +123,17 @@ test('invalid order statuses are rejected without reaching persistence', async (
   assert.equal((await response.json()).error.code, 'INVALID_ORDER_STATUS');
 });
 
+test('completed and cancelled orders are terminal', async () => {
+  const repository = fakeRepository();
+  await repository.updateOrderStatus(orderNo, 'completed');
+  const service = createAdminService(repository);
+  await assert.rejects(service.updateOrderStatus(orderNo, { status: 'processing' }), error => {
+    assert.ok(error instanceof Error && 'status' in error && error.status === 409);
+    assert.ok('code' in error && error.code === 'TERMINAL_ORDER_STATUS');
+    return true;
+  });
+});
+
 test('nonexistent admin order lookups return not found', async () => {
   const response = await request('admin', '/orders/MDG-20260920-NONE00');
   assert.equal(response.status, 404);
