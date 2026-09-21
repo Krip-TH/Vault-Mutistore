@@ -1,4 +1,4 @@
-import type { AdminDashboardData, AdminOrder, AdminOrderSummary, AdminProduct, AdminProductInput, ProductOptions } from '../types/admin';
+import type { AdminDashboardData, AdminOrder, AdminOrderSummary, AdminProduct, AdminProductInput, ProductOptions,ManagedUser,ManagedBusiness } from '../types/admin';
 import type { OrderStatus } from '../types/order';
 
 type ErrorResponse = { error?: { message?: string } };
@@ -16,6 +16,13 @@ async function readData<T>(response: Response, fallback: string): Promise<T> {
   if (payload.data === undefined) throw new Error('The admin response was incomplete.');
   return payload.data;
 }
+const json=(method:string,body:unknown)=>({method,credentials:'same-origin' as const,headers:{Accept:'application/json','Content-Type':'application/json'},body:JSON.stringify(body)});
+export const fetchAdminUsers=async(fetcher:typeof fetch=fetch)=>readData<ManagedUser[]>(await fetcher('/api/admin/users',options),'Unable to load users.');
+export const createAdminUser=async(body:unknown,fetcher:typeof fetch=fetch)=>readData<ManagedUser>(await fetcher('/api/admin/users',json('POST',body)),'Unable to create user.');
+export const updateAdminUser=async(id:number,body:unknown,fetcher:typeof fetch=fetch)=>readData<ManagedUser>(await fetcher(`/api/admin/users/${id}`,json('PUT',body)),'Unable to update user.');
+export async function deleteAdminUser(id:number,fetcher:typeof fetch=fetch){const r=await fetcher(`/api/admin/users/${id}`,{method:'DELETE',credentials:'same-origin'});if(!r.ok)await readData(r,'Unable to delete user.')}
+export const fetchAdminBusinesses=async(fetcher:typeof fetch=fetch)=>readData<ManagedBusiness[]>(await fetcher('/api/admin/businesses',options),'Unable to load businesses.');
+export const updateAdminBusiness=async(id:number,body:unknown,fetcher:typeof fetch=fetch)=>readData<ManagedBusiness>(await fetcher(`/api/admin/businesses/${id}`,json('PUT',body)),'Unable to update business.');
 
 const options = { credentials: 'same-origin' as const, headers: { Accept: 'application/json' } };
 

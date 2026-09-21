@@ -7,10 +7,13 @@ import type { OrderStatus } from '../types/order';
 import { useAuth } from '../auth/AuthContext';
 import { adminNavigation } from '../navigation';
 import AdminProducts from './AdminProducts';
+import { HamburgerButton, NavigationDrawer } from './NavigationDrawer';
+import {AdminBusinesses,AdminUsers} from './AdminManagement';
 
 const price = new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' });
 const dateTime = new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short' });
 const statuses: OrderStatus[] = ['pending', 'confirmed', 'processing', 'shipped', 'completed', 'cancelled'];
+const adminTitles: Record<AdminView, string> = { dashboard: 'Dashboard', products: 'Products', orders: 'Orders', users: 'Users', businesses: 'Businesses' };
 
 export default function AdminDashboard({ view, onViewChange, onClose, onLogout }: {
   view: AdminView;
@@ -26,6 +29,8 @@ export default function AdminDashboard({ view, onViewChange, onClose, onLogout }
   const [error, setError] = useState('');
   const [logoutError, setLogoutError] = useState('');
   const [loggingOut, setLoggingOut] = useState(false);
+  const [navigationOpen, setNavigationOpen] = useState(false);
+  const closeNavigation = useCallback(() => setNavigationOpen(false), []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -58,23 +63,13 @@ export default function AdminDashboard({ view, onViewChange, onClose, onLogout }
 
   return <div className="admin-page" aria-labelledby="admin-title">
     <div className="admin-shell">
-      <aside className="admin-sidebar">
-        <a className="admin-brand" href="#/home" onClick={event => { event.preventDefault(); onClose(); }}><span>V.</span> VAULT ADMIN</a>
-        <p>Administration</p>
-        <nav aria-label="Admin navigation">
-          {adminNavigation.map(item => <button key={item.view} className={view === item.view ? 'is-active' : ''}
-            onClick={() => onViewChange(item.view)}>{item.label}</button>)}
-        </nav>
-        <div className="admin-sidebar-footer">
-          <button className="admin-return" onClick={onClose}>← Return to store</button>
-          <div className="admin-account"><span>{user?.name}</span><small>{user?.email}</small></div>
-          <button className="admin-logout" onClick={() => void logout()} disabled={loggingOut}>{loggingOut ? 'Signing out…' : 'Log out'}</button>
-          {logoutError && <p className="admin-logout-error" role="alert">{logoutError}</p>}
-        </div>
-      </aside>
+      <NavigationDrawer open={navigationOpen} title="VAULT ADMIN" onClose={closeNavigation}>
+        <nav className="nav-drawer-links admin-drawer-links" aria-label="Admin navigation">{adminNavigation.map(item => <button type="button" key={item.view} className={view === item.view ? 'is-active' : ''} aria-current={view === item.view ? 'page' : undefined} onClick={() => { closeNavigation(); onViewChange(item.view); }}>{item.label}</button>)}</nav>
+        <footer className="nav-drawer-footer"><button type="button" className="nav-return-store" onClick={() => { closeNavigation(); onClose(); }}>← Return to Store</button><div><strong>{user?.name}</strong><span>{user?.email}</span><small>Administrator</small></div><button type="button" onClick={() => void logout()} disabled={loggingOut}>{loggingOut ? 'Signing out…' : 'Log out'}</button>{logoutError && <p className="admin-logout-error" role="alert">{logoutError}</p>}</footer>
+      </NavigationDrawer>
       <main className="admin-main">
         <header className="admin-header">
-          <div><p className="eyebrow">VAULT ADMIN</p><h2 id="admin-title">{selected ? selected.order_no : view === 'dashboard' ? 'Dashboard' : view === 'products' ? 'Products' : 'Orders'}</h2></div>
+          <div className="admin-header-title"><HamburgerButton expanded={navigationOpen} onClick={() => setNavigationOpen(true)} label="Open admin navigation" /><div><p className="eyebrow">VAULT ADMIN</p><h2 id="admin-title">{selected ? selected.order_no : adminTitles[view]}</h2></div></div>
         </header>
         {loading && <AdminState title="Loading admin data…" />}
         {!loading && error && <AdminState title="Unable to load admin data." detail={error} action={() => void load()} />}
@@ -89,6 +84,8 @@ export default function AdminDashboard({ view, onViewChange, onClose, onLogout }
         {!loading && !error && !selected && view === 'orders' &&
           <OrdersView orders={orders} onOpen={orderNo => void openOrder(orderNo)} />}
         {!loading && !error && !selected && view === 'products' && <AdminProducts />}
+        {!loading && !error && !selected && view === 'users' && <AdminUsers />}
+        {!loading && !error && !selected && view === 'businesses' && <AdminBusinesses />}
       </main>
     </div>
   </div>;
