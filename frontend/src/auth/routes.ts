@@ -1,20 +1,27 @@
 import type { User } from '../types/auth';
 
-export type AppRoute = 'login' | 'register' | 'admin-login' | 'home' | 'orders' | 'admin' | 'admin-orders';
+export type AppRoute = 'login' | 'register' | 'admin-login' | 'home' | 'products' | 'cart' | 'orders' | 'profile'
+  | 'admin' | 'admin-products' | 'admin-orders' | 'admin-users' | 'admin-businesses';
 
 const hashes: Record<AppRoute, string> = {
   login: '#/login',
   register: '#/register',
   'admin-login': '#/admin/login',
   home: '#/home',
+  products: '#/products',
+  cart: '#/cart',
   orders: '#/orders',
+  profile: '#/profile',
   admin: '#/admin',
+  'admin-products': '#/admin/products',
   'admin-orders': '#/admin/orders',
+  'admin-users': '#/admin/users',
+  'admin-businesses': '#/admin/businesses',
 };
 
 const legacyHashes: Partial<Record<string, AppRoute>> = {
-  '#login': 'login', '#register': 'register', '#home': 'home', '#orders': 'orders',
-  '#admin': 'admin', '#admin/orders': 'admin-orders',
+  '#login': 'login', '#register': 'register', '#home': 'home', '#products': 'products', '#cart': 'cart', '#orders': 'orders', '#profile': 'profile',
+  '#admin': 'admin', '#admin/products': 'admin-products', '#admin/orders': 'admin-orders', '#admin/users': 'admin-users', '#admin/businesses': 'admin-businesses',
 };
 
 export function parseRoute(hash: string): AppRoute {
@@ -35,11 +42,11 @@ export function routeAfterAuthentication(user: User): AppRoute {
 export function resolveProtectedRoute(route: AppRoute, user: User | null): AppRoute {
   if (!user) {
     if (route === 'register') return 'register';
-    if (route === 'admin-login' || route === 'admin' || route === 'admin-orders') return 'admin-login';
+    if (route === 'admin-login' || route.startsWith('admin')) return 'admin-login';
     return 'login';
   }
   if (route === 'login' || route === 'register' || route === 'admin-login') return routeAfterAuthentication(user);
-  if ((route === 'admin' || route === 'admin-orders') && user.role !== 'admin') return 'home';
+  if (route.startsWith('admin') && user.role !== 'admin') return 'home';
   return route;
 }
 

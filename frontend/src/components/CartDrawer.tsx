@@ -6,7 +6,7 @@ import { StockBadge } from './ProductPresentation';
 
 const price = new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' });
 
-export default function CartDrawer({ onExplore, onCheckout }: { onExplore: () => void; onCheckout: () => void }) {
+export default function CartDrawer({ onClose, onExplore, onCheckout }: { onClose: () => void; onExplore: () => void; onCheckout: () => void }) {
   const cart = useCart();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const groups = useMemo(() => {
@@ -31,12 +31,12 @@ export default function CartDrawer({ onExplore, onCheckout }: { onExplore: () =>
   }, [cart.isOpen]);
   if (!cart.isOpen) return null;
 
-  return <dialog ref={dialogRef} className="cart-dialog" aria-labelledby="cart-title" onCancel={cart.closeCart}
-    onClick={event => { if (event.target === event.currentTarget) cart.closeCart(); }}>
+  return <dialog ref={dialogRef} className="cart-dialog" aria-labelledby="cart-title" onCancel={onClose}
+    onClick={event => { if (event.target === event.currentTarget) onClose(); }}>
     <div className="cart-drawer">
       <header className="cart-header">
         <div><p className="eyebrow">YOUR SELECTION</p><h2 id="cart-title">Cart <span>/ {cart.itemCount}</span></h2></div>
-        <button className="cart-close" onClick={cart.closeCart} aria-label="Close cart" autoFocus>×</button>
+        <button className="cart-close" onClick={onClose} aria-label="Close cart" autoFocus>×</button>
       </header>
       {cart.items.length === 0 ? <div className="cart-empty">
         <span className="cart-empty-mark" aria-hidden="true">V.</span>

@@ -46,6 +46,10 @@ export function createAdminService(repository: AdminRepository = adminRepository
     async updateOrderStatus(orderNo, payload) {
       const validNumber = validOrderNumber(orderNo);
       const status = statusFromPayload(payload);
+      const current = await getOrder(validNumber);
+      if ((current.status === 'completed' || current.status === 'cancelled') && status !== current.status) {
+        throw new ApiError(409, 'TERMINAL_ORDER_STATUS', `${current.status === 'completed' ? 'Completed' : 'Cancelled'} orders cannot change status.`);
+      }
       if (!await repository.updateOrderStatus(validNumber, status)) {
         throw new ApiError(404, 'ORDER_NOT_FOUND', 'Order not found.');
       }

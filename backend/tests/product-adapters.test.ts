@@ -8,7 +8,7 @@ import { normalizeProduct as normalizePowerbank } from '../src/adapters/powerban
 import { normalizeProduct as normalizeProjector } from '../src/adapters/projector/index.js';
 import type { ProductAdapter } from '../src/adapters/types.js';
 import { aggregateProducts } from '../src/services/productService.js';
-import type { BusinessType, NormalizedProduct } from '../src/types/product.js';
+import type { ExternalBusinessType, NormalizedProduct } from '../src/types/product.js';
 
 test('all six adapters normalize their source fields into the shared contract', () => {
   const products = [
@@ -38,14 +38,14 @@ test('all six adapters normalize their source fields into the shared contract', 
 });
 
 test('aggregation isolates failures and distinguishes unavailable from online-empty businesses', async () => {
-  const product = (business: BusinessType, id = 'shared'): NormalizedProduct => ({
+  const product = (business: ExternalBusinessType, id = 'shared'): NormalizedProduct => ({
     id, business, business_name: business, name: `${business} product`, category: 'Test',
     price: 100, stock: 2, unit: 'pcs', status: 'Low Stock', image_url: '',
     updated_at: '2026-09-20T00:00:00Z',
   });
   const succeeds = (products: NormalizedProduct[]): ProductAdapter => ({ async getProducts() { return products; } });
   const fails: ProductAdapter = { async getProducts() { throw new Error('offline'); } };
-  const adapterMap: Record<BusinessType, ProductAdapter> = {
+  const adapterMap: Record<ExternalBusinessType, ProductAdapter> = {
     door: succeeds([product('door'), product('door')]),
     plug: fails,
     brandname: succeeds([]),

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { fetchAdminDashboard, fetchAdminOrders, updateAdminOrderStatus } from '../src/admin/adminApi';
+import { createAdminProduct, deleteAdminProduct, fetchAdminAnalytics, fetchAdminDashboard, fetchAdminProductOptions, fetchAdminProducts, fetchAdminOrders, updateAdminOrderStatus, updateAdminProduct, uploadAdminProductImage } from '../src/admin/adminApi';
+import type { AdminProduct } from '../src/types/admin';
 
 test('admin dashboard and order list use protected same-origin endpoints', async () => {
   const requests: Array<{ url: string; credentials?: RequestCredentials }> = [];
@@ -42,4 +43,52 @@ test('admin API errors preserve safe backend messages', async () => {
     error: { code: 'FORBIDDEN', message: 'Admin access is required.' },
   }), { status: 403, headers: { 'Content-Type': 'application/json' } });
   await assert.rejects(fetchAdminDashboard(fetcher), /Admin access is required/);
+});
+
+test('admin image upload sends a single multipart image without overriding its content type', async () => {
+  let captured: RequestInit | undefined;
+  const file = new File(['image'], 'product.webp', { type: 'image/webp' });
+  const url = await uploadAdminProductImage(file, async (_input, init) => {
+    captured = init;
+    return new Response(JSON.stringify({ data: { image_url: '/uploads/products/safe.webp' } }), { status: 201, headers: { 'Content-Type': 'application/json' } });
+  });
+  assert.equal(url, '/uploads/products/safe.webp');
+  assert.equal(captured?.method, 'POST'); assert.equal(captured?.credentials, 'same-origin');
+  assert.ok(captured?.body instanceof FormData); assert.equal((captured?.body as FormData).get('image'), file);
+  assert.deepEqual(captured?.headers, { Accept: 'application/json' });
+});
+
+test('admin product CRUD uses protected ownership-aware endpoints', async () => {
+  const calls: Array<{ url: string; method?: string; body?: string }> = [];
+  const product: AdminProduct = { id: '4', business: 'vault', business_name: 'VAULT', catalog_business: 'door', catalog_business_name: 'Door', name: 'Door Handle', category: 'Doors', price: 900, stock: 2, unit: 'pcs', status: 'Low Stock', image_url: '', updated_at: '', management: 'vault', can_edit: true, can_delete: true };
+  const fetcher: typeof fetch = async (input, init) => {
+    calls.push({ url: String(input), method: init?.method, body: init?.body ? String(init.body) : undefined });
+    if (init?.method === 'DELETE') return new Response(null, { status: 204 });
+    return new Response(JSON.stringify({ data: String(input).endsWith('/products') && !init?.method ? [product] : product }), { status: init?.method === 'POST' ? 201 : 200, headers: { 'Content-Type': 'application/json' } });
+  };
+  await fetchAdminProducts(fetcher);
+  const input = { business: 'door', name: 'Door Handle', category: 'Doors', price: 900, stock: 2, unit: 'pcs', image_url: '' };
+  await createAdminProduct(input, fetcher); await updateAdminProduct(product, input, fetcher); await deleteAdminProduct(product, fetcher);
+  assert.deepEqual(calls.map(call => [call.url, call.method]), [
+    ['/api/admin/products', undefined], ['/api/admin/products', 'POST'],
+    ['/api/admin/products/vault/4', 'PUT'], ['/api/admin/products/vault/4', 'DELETE'],
+  ]);
+});
+
+test('admin product options use the protected dynamic endpoint', async () => {
+  let url = '';
+  const options = await fetchAdminProductOptions(async input => {
+    url = String(input);
+    return new Response(JSON.stringify({ data: { businesses: [{ id: 'door', name: 'Door', categories: ['Doors'] }] } }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  });
+  assert.equal(url, '/api/admin/product-options');
+  assert.deepEqual(options.businesses[0], { id: 'door', name: 'Door', categories: ['Doors'] });
+});
+
+test('admin analytics uses its protected same-origin endpoint', async () => {
+  let captured:{url:string;credentials?:RequestCredentials}|undefined;
+  const payload={kpis:{total_orders:2},revenue_trend:[],revenue_by_business:[],inventory:[],products_by_business:[],order_statuses:[],top_products:[],kmeans:{products:[],clusters:[]},insights:[],warnings:[],recent_orders:[],business_availability:[]};
+  const result=await fetchAdminAnalytics(async(input,init)=>{captured={url:String(input),credentials:init?.credentials};return new Response(JSON.stringify({data:payload}),{status:200,headers:{'Content-Type':'application/json'}})});
+  assert.equal(result.kpis.total_orders,2);
+  assert.deepEqual(captured,{url:'/api/admin/analytics',credentials:'same-origin'});
 });

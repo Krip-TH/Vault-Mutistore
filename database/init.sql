@@ -33,6 +33,25 @@ CREATE TABLE IF NOT EXISTS products_cache (
     ON UPDATE CASCADE ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
+-- Products authored and owned by VAULT. External adapter products remain read-only
+-- and products_cache remains a non-authoritative integration cache.
+CREATE TABLE IF NOT EXISTS vault_products (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  business_key VARCHAR(50) NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  category VARCHAR(120) NOT NULL,
+  price DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+  stock INT UNSIGNED NOT NULL DEFAULT 0,
+  unit VARCHAR(50) NOT NULL DEFAULT 'pcs',
+  image_url VARCHAR(2048) NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_vault_products_category (category),
+  KEY idx_vault_products_business_category (business_key, category),
+  KEY idx_vault_products_updated (updated_at)
+) ENGINE=InnoDB;
+
 CREATE TABLE IF NOT EXISTS sync_logs (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   business_id BIGINT UNSIGNED NOT NULL,

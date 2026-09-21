@@ -1,26 +1,20 @@
-import { adapters } from '../adapters/index.js';
+import { adapters, businessCatalog } from '../adapters/index.js';
 import type { ProductAdapter } from '../adapters/types.js';
 import type {
-  BusinessAvailability, BusinessType, NormalizedProduct, ProductAggregation,
+  BusinessAvailability, ExternalBusinessType, NormalizedProduct, ProductAggregation,
 } from '../types/product.js';
+import { productRepository } from '../repositories/productRepository.js';
 
 function getConfiguredUrl(business: string): string {
   return process.env[`${business.toUpperCase()}_API_URL`] || '(adapter default)';
 }
 
-type AdapterMap = Record<BusinessType, ProductAdapter>;
+type AdapterMap = Record<ExternalBusinessType, ProductAdapter>;
 type ProductLogger = Pick<Console, 'info' | 'warn' | 'error'>;
 
-const businessNames: Record<BusinessType, string> = {
-  door: 'Door',
-  plug: 'Electrical Plug',
-  brandname: 'Brandname',
-  clothing: 'Clothing',
-  powerbank: 'Powerbank',
-  projector: 'Projector',
-};
+const businessNames = Object.fromEntries(businessCatalog.map(item => [item.id, item.name])) as Record<ExternalBusinessType, string>;
 
-function isUsableProduct(product: NormalizedProduct, business: BusinessType): boolean {
+function isUsableProduct(product: NormalizedProduct, business: ExternalBusinessType): boolean {
   return product.business === business
     && typeof product.id === 'string' && product.id.trim() !== ''
     && typeof product.name === 'string' && product.name.trim() !== ''
@@ -32,7 +26,7 @@ export async function aggregateProducts(
   adapterMap: AdapterMap = adapters,
   logger: ProductLogger = console,
 ): Promise<ProductAggregation> {
-  const adapterEntries = Object.entries(adapterMap) as Array<[BusinessType, ProductAdapter]>;
+  const adapterEntries = Object.entries(adapterMap) as Array<[ExternalBusinessType, ProductAdapter]>;
   const results = await Promise.allSettled(adapterEntries.map(async ([business, adapter]) => {
     const url = getConfiguredUrl(business);
     logger.info(`[${business}] Requesting products from ${url}`);
@@ -67,5 +61,14 @@ export async function aggregateProducts(
 }
 
 export const productService = {
-  getProductAggregation: () => aggregateProducts(),
+  async getProductAggregation() {
+    const [external, local] = await Promise.all([aggregateProducts(), productRepository.list()]);
+    return {
+      products: [...local, ...external.products],
+      businesses: [
+        { business: 'vault' as const, business_name: 'VAULT', status: 'online' as const, product_count: local.length },
+        ...external.businesses,
+      ],
+    };
+  },
 };

@@ -13,10 +13,20 @@ import AdminDashboard from './components/AdminDashboard';
 import { useAuth } from './auth/AuthContext';
 import { parseRoute, resolveProtectedRoute, routeAfterAuthentication, routeAfterLogout, routeHash } from './auth/routes';
 import type { AppRoute } from './auth/routes';
-import { customerNavigation } from './navigation';
+import { customerNavigation, isRouteActive } from './navigation';
 import { useCart } from './cart/CartContext';
 import { textValue } from './utils/product';
 import type { AdminView } from './types/admin';
+import CustomerProfile from './components/CustomerProfile';
+import { HamburgerButton, NavigationDrawer } from './components/NavigationDrawer';
+
+const adminViewByRoute: Partial<Record<AppRoute, AdminView>> = {
+  admin: 'dashboard', 'admin-products': 'products', 'admin-orders': 'orders',
+  'admin-users': 'users', 'admin-businesses': 'businesses',
+};
+const adminRouteByView: Record<AdminView, AppRoute> = {
+  dashboard: 'admin', products: 'admin-products', orders: 'admin-orders', users: 'admin-users', businesses: 'admin-businesses',
+};
 
 function App() {
   const auth = useAuth();
@@ -50,10 +60,10 @@ function App() {
       onCustomerLogin={() => navigate('login')}
       onAuthenticated={user => navigate(isAdminLogin ? 'admin' : routeAfterAuthentication(user), true)} />;
   }
-  if (route === 'admin' || route === 'admin-orders') {
-    const view: AdminView = route === 'admin-orders' ? 'orders' : 'dashboard';
-    return <AdminDashboard view={view}
-      onViewChange={next => navigate(next === 'orders' ? 'admin-orders' : 'admin')}
+  const adminView = adminViewByRoute[route];
+  if (adminView) {
+    return <AdminDashboard view={adminView}
+      onViewChange={next => navigate(adminRouteByView[next])}
       onClose={() => navigate('home')}
       onLogout={async () => {
         const destination = routeAfterLogout(auth.user!);
@@ -105,6 +115,9 @@ function Storefront({ route, navigate }: { route: AppRoute; navigate: (route: Ap
   const [stockStatus, setStockStatus] = useState<StockStatus | 'all'>('all');
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [selectedOrderNo, setSelectedOrderNo] = useState<string | undefined>();
+  const [navigationOpen, setNavigationOpen] = useState(false);
+  const [navigationLogoutError, setNavigationLogoutError] = useState('');
+  const closeNavigation = useCallback(() => setNavigationOpen(false), []);
   const ordersOpen = route === 'orders';
   const logoutDestination = auth.user ? routeAfterLogout(auth.user) : 'login';
 
@@ -161,6 +174,11 @@ function Storefront({ route, navigate }: { route: AppRoute; navigate: (route: Ap
       setSelectedOrderNo(undefined);
     }
   }, [auth.loading, auth.user]);
+  useEffect(() => {
+    if (route === 'cart') cart.openCart();
+    if (route === 'products') requestAnimationFrame(() => document.querySelector('#explore')?.scrollIntoView());
+    if (route === 'home') window.scrollTo({ top: 0 });
+  }, [cart.openCart, route]);
 
   const categories = useMemo(
     () => [...new Set(products.map((product) => textValue(product.category)).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
@@ -212,7 +230,7 @@ function Storefront({ route, navigate }: { route: AppRoute; navigate: (route: Ap
 
   function openAdmin(view: AdminView) {
     if (auth.user?.role !== 'admin') return;
-    navigate(view === 'orders' ? 'admin-orders' : 'admin');
+    navigate(adminRouteByView[view]);
   }
 
   const [selection, setSelected] = useState<Product | null>(null);
@@ -227,11 +245,14 @@ function Storefront({ route, navigate }: { route: AppRoute; navigate: (route: Ap
     <div id="home">
       <a className="skip-link" href="#explore">Skip to products</a>
       <header className="site-header">
-        <a className="brand" href="#/home"><span className="brand-symbol">V.</span><span>VAULT</span></a>
-        <nav className="desktop-nav" aria-label="Main navigation">{customerNavigation.map(item => <a key={item.label} href={item.href}>{item.label}</a>)}<button onClick={() => openOrders()}>Orders</button></nav>
-        <div className="header-actions"><a href="#search">Search <span aria-hidden="true">⌕</span></a><a className="inventory-link" href="#inventory">Inventory <span>{loading || error ? '—' : summary.total}</span></a><button className="header-cart" onClick={cart.openCart} aria-label={`Open cart with ${cart.itemCount} items`}>Cart <span>{cart.itemCount}</span></button><AccountMenu onOrders={() => openOrders()} onAdmin={() => openAdmin('dashboard')} onLogout={() => navigate(logoutDestination, true)} /></div>
+        <div className="header-brand-group"><HamburgerButton expanded={navigationOpen} onClick={() => setNavigationOpen(true)} /><a className="brand" href="#/home"><span className="brand-symbol">V.</span><span>VAULT</span></a></div>
+        <div className="header-actions"><button className={`header-cart ${route === 'cart' ? 'is-active' : ''}`} onClick={() => navigate('cart')} aria-label={`Open cart with ${cart.itemCount} items`}>Cart <span>{cart.itemCount}</span></button><AccountMenu onOrders={() => openOrders()} onProfile={() => navigate('profile')} onAdmin={() => openAdmin('dashboard')} onLogout={() => navigate(logoutDestination, true)} /></div>
       </header>
-      <main className="page-shell">
+      <NavigationDrawer open={navigationOpen} title="VAULT" onClose={closeNavigation}>
+        <nav className="nav-drawer-links" aria-label="Customer navigation">{customerNavigation.map(item => <button type="button" key={item.route} className={isRouteActive(route, item.route) ? 'is-active' : ''} aria-current={isRouteActive(route, item.route) ? 'page' : undefined} onClick={() => { closeNavigation(); navigate(item.route); }}>{item.label}{item.route === 'cart' && <span>{cart.itemCount}</span>}</button>)}</nav>
+        <footer className="nav-drawer-footer"><div><strong>{auth.user?.name}</strong><span>{auth.user?.email}</span></div><button type="button" onClick={() => { setNavigationLogoutError(''); void auth.logout().then(() => { closeNavigation(); navigate(logoutDestination, true); }).catch(() => setNavigationLogoutError('Unable to sign out. Please try again.')); }}>Log out</button>{navigationLogoutError && <p className="account-error" role="alert">{navigationLogoutError}</p>}</footer>
+      </NavigationDrawer>
+      {route === 'profile' ? <CustomerProfile onLogout={async () => { await auth.logout(); navigate(logoutDestination, true); }} /> : <main className="page-shell">
         <section className="hero" aria-labelledby="hero-title">
           <div className="hero-copy"><p className="eyebrow">SIX BUSINESSES. ONE DESTINATION.</p><h1 id="hero-title">A world of finds.<br /><em>All in one place.</em></h1><p className="hero-description">From the spaces you create to the essentials you carry. Discover products and explore live inventory from six independent businesses.</p><a className="primary-button" href="#explore">Explore the collection <span aria-hidden="true">↗</span></a><p className="hero-note"><span className="small-dot" /> Thoughtful discovery. A clearer view of stock.</p></div>
           <div className="hero-visual"><span className="eyebrow hero-caption">THE EVERYDAY, RECONSIDERED</span>
@@ -261,14 +282,13 @@ function Storefront({ route, navigate }: { route: AppRoute; navigate: (route: Ap
           </div>
         </section>
         <footer className="site-footer"><a className="footer-brand" href="#/home">VAULT — Multi-Store Marketplace Application</a><p>Six independent businesses. One shared perspective.</p><a href="#/home">Back to top ↑</a></footer>
-      </main>
-      <nav className="mobile-nav" aria-label="Mobile navigation"><a href="#/home">Home</a><a href="#explore">Explore</a><button onClick={() => openOrders()}>Orders</button><button onClick={cart.openCart}>Cart <span>{cart.itemCount}</span></button></nav>
+      </main>}
       {selected && <ProductDetail key={productKey(selected)} product={selected} onClose={() => setSelected(null)}
         inventoryAvailable={inventoryAvailable}
         favorite={favorites.favorites.includes(productKey(selected))}
         onFavorite={() => setFavorites(current => ({ favorites: current.favorites.includes(productKey(selected)) ? current.favorites.filter(key => key !== productKey(selected)) : [...current.favorites, productKey(selected)] }))}
         onSelectProduct={setSelected} />}
-      <CartDrawer onExplore={() => document.querySelector('#explore')?.scrollIntoView({ behavior: 'smooth' })} onCheckout={openCheckout} />
+      <CartDrawer onClose={() => { cart.closeCart(); if (route === 'cart') navigate('home'); }} onExplore={() => { navigate('products'); document.querySelector('#explore')?.scrollIntoView({ behavior: 'smooth' }); }} onCheckout={() => { navigate('home'); openCheckout(); }} />
       {checkoutOpen && <Checkout onClose={() => setCheckoutOpen(false)}
         onContinue={() => document.querySelector('#explore')?.scrollIntoView({ behavior: 'smooth' })}
         onViewOrder={openOrders} />}
