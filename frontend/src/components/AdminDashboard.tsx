@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-  fetchAdminDashboard, fetchAdminOrder, fetchAdminOrders, updateAdminOrderStatus,
+  fetchAdminAnalytics, fetchAdminOrder, fetchAdminOrders, updateAdminOrderStatus,
 } from '../admin/adminApi';
-import type { AdminDashboardData, AdminOrder, AdminOrderSummary, AdminView } from '../types/admin';
+import type { AdminAnalytics as AdminAnalyticsData, AdminOrder, AdminOrderSummary, AdminView } from '../types/admin';
 import type { OrderStatus } from '../types/order';
 import { useAuth } from '../auth/AuthContext';
 import { adminNavigation } from '../navigation';
 import AdminProducts from './AdminProducts';
 import { HamburgerButton, NavigationDrawer } from './NavigationDrawer';
 import {AdminBusinesses,AdminUsers} from './AdminManagement';
+import AdminAnalytics from './AdminAnalytics';
 
 const price = new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' });
 const dateTime = new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short' });
@@ -22,7 +23,7 @@ export default function AdminDashboard({ view, onViewChange, onClose, onLogout }
   onLogout: () => Promise<void>;
 }) {
   const { user } = useAuth();
-  const [dashboard, setDashboard] = useState<AdminDashboardData | null>(null);
+  const [dashboard, setDashboard] = useState<AdminAnalyticsData | null>(null);
   const [orders, setOrders] = useState<AdminOrderSummary[]>([]);
   const [selected, setSelected] = useState<AdminOrder | null>(null);
   const [loading, setLoading] = useState(true);
@@ -37,7 +38,7 @@ export default function AdminDashboard({ view, onViewChange, onClose, onLogout }
     setError('');
     setSelected(null);
     try {
-      if (view === 'dashboard') setDashboard(await fetchAdminDashboard());
+      if (view === 'dashboard') setDashboard(await fetchAdminAnalytics());
       else if (view === 'orders') setOrders(await fetchAdminOrders());
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'Unable to load admin data.');
@@ -77,10 +78,10 @@ export default function AdminDashboard({ view, onViewChange, onClose, onLogout }
           onUpdated={order => {
             setSelected(order);
             setOrders(current => current.map(item => item.order_no === order.order_no ? { ...item, status: order.status } : item));
-            if (dashboard) void fetchAdminDashboard().then(setDashboard).catch(() => { /* Detail remains usable if refresh fails. */ });
+            if (dashboard) void fetchAdminAnalytics().then(setDashboard).catch(() => { /* Detail remains usable if refresh fails. */ });
           }} />}
         {!loading && !error && !selected && view === 'dashboard' && dashboard &&
-          <DashboardView data={dashboard} onOpen={orderNo => void openOrder(orderNo)} />}
+          <AdminAnalytics data={dashboard} onOpen={orderNo => void openOrder(orderNo)} />}
         {!loading && !error && !selected && view === 'orders' &&
           <OrdersView orders={orders} onOpen={orderNo => void openOrder(orderNo)} />}
         {!loading && !error && !selected && view === 'products' && <AdminProducts />}
@@ -88,23 +89,6 @@ export default function AdminDashboard({ view, onViewChange, onClose, onLogout }
         {!loading && !error && !selected && view === 'businesses' && <AdminBusinesses />}
       </main>
     </div>
-  </div>;
-}
-
-function DashboardView({ data, onOpen }: { data: AdminDashboardData; onOpen: (orderNo: string) => void }) {
-  const metrics: Array<[string, number | string]> = [
-    ['Total orders', data.total_orders], ['Total customers', data.total_customers],
-    ['Total revenue', price.format(data.total_revenue)], ['Pending', data.pending_orders],
-    ['Confirmed', data.confirmed_orders], ['Processing', data.processing_orders],
-    ['Shipped', data.shipped_orders], ['Completed', data.completed_orders], ['Cancelled', data.cancelled_orders],
-  ];
-  return <div className="admin-content">
-    <section className="admin-metrics" aria-label="Order statistics">
-      {metrics.map(([label, value]) => <article key={label}><span>{label}</span><strong>{value}</strong></article>)}
-    </section>
-    <section className="admin-section"><div className="admin-section-heading"><div><p className="eyebrow">LATEST ACTIVITY</p><h3>Recent orders</h3></div></div>
-      <AdminOrderTable orders={data.recent_orders} onOpen={onOpen} />
-    </section>
   </div>;
 }
 

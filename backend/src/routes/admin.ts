@@ -8,14 +8,19 @@ import { productImageUpload } from '../middleware/productImageUpload.js';
 import { adminProductService } from '../services/adminProductService.js';
 import type { AdminProductService } from '../services/adminProductService.js';
 import {createManagementController} from '../controllers/managementController.js';
+import {createAnalyticsController} from '../controllers/analyticsController.js';
+import {analyticsService} from '../services/analyticsService.js';
+import type {AnalyticsService} from '../controllers/analyticsController.js';
 
-export function createAdminRouter(service: AdminService = adminService, products: AdminProductService = adminProductService) {
+export function createAdminRouter(service: AdminService = adminService, products: AdminProductService = adminProductService, analytics: AnalyticsService = analyticsService) {
   const router = Router();
   const controller = createAdminController(service);
   const productController = createAdminProductController(products);
   const management=createManagementController();
+  const analyticsController=createAnalyticsController(analytics);
   router.use(requireAdmin);
   router.get('/dashboard', controller.getDashboard);
+  router.get('/analytics', analyticsController.overview);
   router.get('/orders', controller.getOrders);
   router.get('/orders/:orderNo', controller.getOrder);
   router.patch('/orders/:orderNo/status', controller.patchOrderStatus);
