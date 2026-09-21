@@ -5,6 +5,8 @@ import { createOrderRequest, initialCheckoutForm, validateCheckout } from '../ch
 import { completeCheckout } from '../checkout/orderApi';
 import type { CheckoutErrors } from '../checkout/checkout';
 import type { CheckoutForm, Order } from '../types/order';
+import { fetchProfile } from '../profile/profileApi';
+import { applyProfileToCheckout } from '../profile/profile';
 import GalleryImage from './GalleryImage';
 
 const price = new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' });
@@ -22,6 +24,22 @@ export default function Checkout({ onClose, onContinue, onViewOrder }: {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [order, setOrder] = useState<Order | null>(null);
+  const [prefilled, setPrefilled] = useState(false);
+  // Fields the customer has typed into; saved profile values never overwrite these.
+  const touched = useRef(new Set<keyof CheckoutForm>());
+
+  // Pre-fill from the saved profile. This is read-only: checkout never writes back to the profile.
+  useEffect(() => {
+    let active = true;
+    fetchProfile()
+      .then(profile => {
+        if (!active) return;
+        setForm(current => applyProfileToCheckout(current, profile, touched.current));
+        setPrefilled(true);
+      })
+      .catch(() => { /* Checkout stays fully usable with manual entry. */ });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -33,6 +51,7 @@ export default function Checkout({ onClose, onContinue, onViewOrder }: {
   }, []);
 
   function update(field: keyof CheckoutForm, value: string) {
+    touched.current.add(field);
     setForm(current => ({ ...current, [field]: value }));
     if (errors[field]) setErrors(current => ({ ...current, [field]: undefined }));
   }
@@ -70,6 +89,7 @@ export default function Checkout({ onClose, onContinue, onViewOrder }: {
         <div className="checkout-layout">
           <main className="checkout-form-copy">
             <p className="eyebrow">CHECKOUT</p><h2 id="checkout-title">Where should we send it?</h2>
+            {prefilled && <p className="checkout-prefill-note">Prefilled from your profile. Changes here apply to this order only and do not update your profile.</p>}
             <fieldset><legend>Customer information</legend>
               <Field label="Full name" name="name" value={form.name} error={errors.name} autoComplete="name" onChange={update} />
               <div className="checkout-field-row">

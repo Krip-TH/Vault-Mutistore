@@ -23,3 +23,5 @@ Desktop.ini
 .vite/
 backend/uploads/products/*
 !backend/uploads/products/.gitkeep
+backend/uploads/profiles/*
+!backend/uploads/profiles/.gitkeep
