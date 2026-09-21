@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 
-export default function AccountMenu({ onOrders, onAdmin, onLogout }: { onOrders: () => void; onAdmin: () => void; onLogout: () => void }) {
+export default function AccountMenu({ onOrders, onProfile, onAdmin, onLogout }: { onOrders: () => void; onProfile: () => void; onAdmin: () => void; onLogout: () => void }) {
   const { user, loading, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [logoutError, setLogoutError] = useState('');
@@ -30,6 +30,7 @@ export default function AccountMenu({ onOrders, onAdmin, onLogout }: { onOrders:
         {user.role === 'admin' && <span className="account-role">Admin</span>}
       </p>
       {user.role === 'customer' && <button role="menuitem" onClick={() => { setMenuOpen(false); onOrders(); }}>My orders</button>}
+      {user.role === 'customer' && <button role="menuitem" onClick={() => { setMenuOpen(false); onProfile(); }}>Profile</button>}
       {user.role === 'admin' && <button role="menuitem" onClick={() => { setMenuOpen(false); onAdmin(); }}>Admin dashboard</button>}
       <button role="menuitem" onClick={() => {
         setLogoutError('');

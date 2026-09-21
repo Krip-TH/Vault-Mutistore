@@ -24,7 +24,7 @@ export interface AdminDashboardData {
 }
 
 export type AdminOrder = Order;
-export type AdminView = 'dashboard' | 'products' | 'orders';
+export type AdminView = 'dashboard' | 'products' | 'orders' | 'users' | 'businesses';
 
 export interface AdminProduct {
   id: string;
@@ -50,3 +50,5 @@ export type AdminProductInput = Pick<AdminProduct, 'name' | 'category' | 'price'
 export interface ProductOptions {
   businesses: Array<{ id: string; name: string; categories: string[] }>;
 }
+export interface ManagedUser {id:number;name:string;email:string;role:'customer'|'admin';created_at:string;updated_at:string}
+export interface ManagedBusiness {id:number;name:string;business_type:string;api_url:string;status:'active'|'inactive'|'unavailable';last_checked_at:string|null;updated_at:string}

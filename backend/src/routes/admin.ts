@@ -7,11 +7,13 @@ import { createAdminProductController, sendUploadError } from '../controllers/ad
 import { productImageUpload } from '../middleware/productImageUpload.js';
 import { adminProductService } from '../services/adminProductService.js';
 import type { AdminProductService } from '../services/adminProductService.js';
+import {createManagementController} from '../controllers/managementController.js';
 
 export function createAdminRouter(service: AdminService = adminService, products: AdminProductService = adminProductService) {
   const router = Router();
   const controller = createAdminController(service);
   const productController = createAdminProductController(products);
+  const management=createManagementController();
   router.use(requireAdmin);
   router.get('/dashboard', controller.getDashboard);
   router.get('/orders', controller.getOrders);
@@ -29,5 +31,7 @@ export function createAdminRouter(service: AdminService = adminService, products
   router.post('/products', productController.create);
   router.put('/products/:business/:id', productController.update);
   router.delete('/products/:business/:id', productController.remove);
+  router.get('/users',management.listUsers);router.post('/users',management.createUser);router.put('/users/:id',management.updateUser);router.delete('/users/:id',management.deleteUser);
+  router.get('/businesses',management.listBusinesses);router.put('/businesses/:id',management.updateBusiness);
   return router;
 }
