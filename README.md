@@ -84,6 +84,14 @@ The active application database and user are `vault_multistore` and `vault_user`
 
 `database/init.sql` runs only when MySQL initializes a new empty volume and creates the complete current schema. `database/migrations/002_order_ownership.sql` is a one-time forward migration for an existing VAULT database that predates order ownership. `database/migrations/001_orders.sql` is retained as history for the former database and must not initialize a new VAULT database.
 
+`database/migrations/005_user_profile.sql` is a one-time forward migration that adds the nullable customer profile columns (`phone`, `address`, `city`, `province`, `postal_code`, `country`, `profile_image_url`) to an existing `users` table; existing accounts are unchanged. Apply it once to an existing database before using the Profile page (fresh installs already get these columns from `init.sql`):
+
+```powershell
+Get-Content database/migrations/005_user_profile.sql | docker compose exec -T mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD"'
+```
+
+Sign-in and account lookup do not depend on the new columns, so an un-migrated database still logs in; only the Profile page reports an error until the migration is applied.
+
 Changing `MYSQL_DATABASE` alone does not create or copy data in an existing volume. The non-destructive `database/migrate-to-vault.sh` utility copies an absent or empty target, verifies a populated target without overwriting it, preserves the legacy source database as rollback, and refreshes the application-user grant. Review its output before switching runtime configuration.
 
 The seeded local administrator is documented in `database/init.sql`. Change its password before using the project outside an isolated development environment.

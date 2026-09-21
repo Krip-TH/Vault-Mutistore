@@ -10,6 +10,8 @@ interface AuthContextValue {
   loginAdmin: (form: LoginForm) => Promise<User>;
   register: (form: RegisterForm) => Promise<User>;
   logout: () => Promise<void>;
+  /** Re-reads the signed-in user from the server so header/account UI reflects saved profile changes. */
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -50,9 +52,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
+  const refreshUser = useCallback(async () => {
+    const current = await fetchCurrentUser();
+    if (current) setUser(current);
+  }, []);
+
   const value = useMemo<AuthContextValue>(() => ({
-    user, loading, login, loginAdmin, register, logout,
-  }), [loading, login, loginAdmin, logout, register, user]);
+    user, loading, login, loginAdmin, register, logout, refreshUser,
+  }), [loading, login, loginAdmin, logout, refreshUser, register, user]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

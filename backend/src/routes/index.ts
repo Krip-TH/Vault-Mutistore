@@ -5,6 +5,7 @@ import { getOrderByNumber, getOrders, postOrder } from '../controllers/orderCont
 import { attachUser, requireAuth } from '../middleware/auth.js';
 import { createAdminRouter } from './admin.js';
 import { createAiRouter } from './ai.js';
+import { createProfileRouter } from './profile.js';
 
 const router = Router();
 router.use(attachUser);
@@ -19,6 +20,7 @@ router.post('/auth/register', postRegister);
 router.post('/auth/login', postLogin);
 router.post('/auth/logout', postLogout);
 router.get('/auth/me', getMe);
+router.use('/profile', createProfileRouter());
 router.use('/admin', createAdminRouter());
 router.use('/ai', createAiRouter());
 export default router;
