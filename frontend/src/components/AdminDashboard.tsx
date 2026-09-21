@@ -6,6 +6,7 @@ import type { AdminDashboardData, AdminOrder, AdminOrderSummary, AdminView } fro
 import type { OrderStatus } from '../types/order';
 import { useAuth } from '../auth/AuthContext';
 import { adminNavigation } from '../navigation';
+import AdminProducts from './AdminProducts';
 
 const price = new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' });
 const dateTime = new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short' });
@@ -32,7 +33,7 @@ export default function AdminDashboard({ view, onViewChange, onClose, onLogout }
     setSelected(null);
     try {
       if (view === 'dashboard') setDashboard(await fetchAdminDashboard());
-      else setOrders(await fetchAdminOrders());
+      else if (view === 'orders') setOrders(await fetchAdminOrders());
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'Unable to load admin data.');
     } finally { setLoading(false); }
@@ -73,7 +74,7 @@ export default function AdminDashboard({ view, onViewChange, onClose, onLogout }
       </aside>
       <main className="admin-main">
         <header className="admin-header">
-          <div><p className="eyebrow">VAULT ADMIN</p><h2 id="admin-title">{selected ? selected.order_no : view === 'dashboard' ? 'Dashboard' : 'Orders'}</h2></div>
+          <div><p className="eyebrow">VAULT ADMIN</p><h2 id="admin-title">{selected ? selected.order_no : view === 'dashboard' ? 'Dashboard' : view === 'products' ? 'Products' : 'Orders'}</h2></div>
         </header>
         {loading && <AdminState title="Loading admin data…" />}
         {!loading && error && <AdminState title="Unable to load admin data." detail={error} action={() => void load()} />}
@@ -87,6 +88,7 @@ export default function AdminDashboard({ view, onViewChange, onClose, onLogout }
           <DashboardView data={dashboard} onOpen={orderNo => void openOrder(orderNo)} />}
         {!loading && !error && !selected && view === 'orders' &&
           <OrdersView orders={orders} onOpen={orderNo => void openOrder(orderNo)} />}
+        {!loading && !error && !selected && view === 'products' && <AdminProducts />}
       </main>
     </div>
   </div>;

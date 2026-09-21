@@ -21,7 +21,7 @@ test('unauthenticated protected routes resolve to the dedicated login page', () 
   for (const route of ['home', 'orders'] as const) {
     assert.equal(resolveProtectedRoute(route, null), 'login');
   }
-  for (const route of ['admin-login', 'admin', 'admin-orders'] as const) {
+  for (const route of ['admin-login', 'admin', 'admin-products', 'admin-orders'] as const) {
     assert.equal(resolveProtectedRoute(route, null), 'admin-login');
   }
   assert.equal(resolveProtectedRoute('register', null), 'register');
@@ -33,6 +33,7 @@ test('successful customer login routes to Home and cannot enter admin routes', a
   assert.equal(resolveProtectedRoute('home', user), 'home');
   assert.equal(resolveProtectedRoute('orders', user), 'orders');
   assert.equal(resolveProtectedRoute('admin', user), 'home');
+  assert.equal(resolveProtectedRoute('admin-products', user), 'home');
   assert.equal(resolveProtectedRoute('admin-orders', user), 'home');
   assert.equal(resolveProtectedRoute('admin-login', user), 'home');
   assert.equal(resolveProtectedRoute('login', user), 'home');
@@ -42,6 +43,7 @@ test('successful admin login routes to and preserves the Admin Dashboard', async
   const user = await loginAdminAccount({ email: admin.email, password: 'Password123' }, userFetcher(admin));
   assert.equal(routeAfterAuthentication(user), 'admin');
   assert.equal(resolveProtectedRoute('admin', user), 'admin');
+  assert.equal(resolveProtectedRoute('admin-products', user), 'admin-products');
   assert.equal(resolveProtectedRoute('admin-orders', user), 'admin-orders');
   assert.equal(resolveProtectedRoute('login', user), 'admin');
 });
@@ -108,15 +110,17 @@ test('hash routes support direct navigation without ambiguous admin paths', () =
   assert.equal(parseRoute('#/orders'), 'orders');
   assert.equal(parseRoute('#/admin/login'), 'admin-login');
   assert.equal(parseRoute('#/admin'), 'admin');
+  assert.equal(parseRoute('#/admin/products'), 'admin-products');
   assert.equal(parseRoute('#/admin/orders'), 'admin-orders');
   assert.equal(parseRoute('#admin/orders'), 'admin-orders');
   assert.equal(routeHash('login'), '#/login');
   assert.equal(routeHash('admin-login'), '#/admin/login');
+  assert.equal(routeHash('admin-products'), '#/admin/products');
   assert.equal(routeHash('admin-orders'), '#/admin/orders');
 });
 
 test('customer and admin navigation remain role-separated', () => {
   assert.deepEqual(customerNavigation.map(item => item.label), ['Home', 'Explore', 'Businesses']);
   assert.equal(customerNavigation.some(item => item.label.toLowerCase().includes('admin')), false);
-  assert.deepEqual(adminNavigation.map(item => item.label), ['Dashboard', 'Orders']);
+  assert.deepEqual(adminNavigation.map(item => item.label), ['Dashboard', 'Products', 'Orders']);
 });

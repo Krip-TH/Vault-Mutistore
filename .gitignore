@@ -21,3 +21,5 @@ Thumbs.db
 Desktop.ini
 *.tsbuildinfo
 .vite/
+backend/uploads/products/*
+!backend/uploads/products/.gitkeep

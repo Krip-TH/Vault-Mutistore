@@ -48,10 +48,10 @@ function App() {
       onCustomerLogin={() => navigate('login')}
       onAuthenticated={user => navigate(isAdminLogin ? 'admin' : routeAfterAuthentication(user), true)} />;
   }
-  if (route === 'admin' || route === 'admin-orders') {
-    const view: AdminView = route === 'admin-orders' ? 'orders' : 'dashboard';
+  if (route === 'admin' || route === 'admin-products' || route === 'admin-orders') {
+    const view: AdminView = route === 'admin-orders' ? 'orders' : route === 'admin-products' ? 'products' : 'dashboard';
     return <AdminDashboard view={view}
-      onViewChange={next => navigate(next === 'orders' ? 'admin-orders' : 'admin')}
+      onViewChange={next => navigate(next === 'orders' ? 'admin-orders' : next === 'products' ? 'admin-products' : 'admin')}
       onClose={() => navigate('home')}
       onLogout={async () => {
         const destination = routeAfterLogout(auth.user!);
@@ -210,7 +210,7 @@ function Storefront({ route, navigate }: { route: AppRoute; navigate: (route: Ap
 
   function openAdmin(view: AdminView) {
     if (auth.user?.role !== 'admin') return;
-    navigate(view === 'orders' ? 'admin-orders' : 'admin');
+    navigate(view === 'orders' ? 'admin-orders' : view === 'products' ? 'admin-products' : 'admin');
   }
 
   const [selection, setSelected] = useState<Product | null>(null);
