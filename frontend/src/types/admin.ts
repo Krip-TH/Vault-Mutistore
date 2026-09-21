@@ -52,3 +52,15 @@ export interface ProductOptions {
 }
 export interface ManagedUser {id:number;name:string;email:string;role:'customer'|'admin';created_at:string;updated_at:string}
 export interface ManagedBusiness {id:number;name:string;business_type:string;api_url:string;status:'active'|'inactive'|'unavailable';last_checked_at:string|null;updated_at:string}
+export interface AdminAnalytics {
+  kpis:{total_revenue:number;total_orders:number;total_customers:number;average_order_value:number;total_products:number;in_stock:number;low_stock:number;out_of_stock:number};
+  revenue_trend:Array<{date:string;revenue:number}>;
+  revenue_by_business:Array<{business:string;revenue:number}>;
+  inventory:Array<{status:string;count:number}>;
+  products_by_business:Array<{business:string;name:string;count:number;available:boolean}>;
+  order_statuses:Array<{status:OrderStatus;count:number}>;
+  top_products:Array<{product_id:string;name:string;business:string;quantity_sold:number;revenue:number}>;
+  kmeans:{products:Array<{id:string;name:string;business:string;price:number;stock:number;cluster:number}>;clusters:Array<{cluster:number;label:string;product_count:number;average_price:number;average_stock:number;centroid_price:number;centroid_stock:number}>};
+  insights:string[]; warnings:string[]; recent_orders:AdminOrderSummary[];
+  business_availability:Array<{business:string;business_name:string;status:'online'|'unavailable';product_count:number}>;
+}

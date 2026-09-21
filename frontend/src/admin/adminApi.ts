@@ -1,4 +1,4 @@
-import type { AdminDashboardData, AdminOrder, AdminOrderSummary, AdminProduct, AdminProductInput, ProductOptions,ManagedUser,ManagedBusiness } from '../types/admin';
+import type { AdminAnalytics, AdminDashboardData, AdminOrder, AdminOrderSummary, AdminProduct, AdminProductInput, ProductOptions,ManagedUser,ManagedBusiness } from '../types/admin';
 import type { OrderStatus } from '../types/order';
 
 type ErrorResponse = { error?: { message?: string } };
@@ -28,6 +28,10 @@ const options = { credentials: 'same-origin' as const, headers: { Accept: 'appli
 
 export async function fetchAdminDashboard(fetcher: typeof fetch = fetch) {
   return readData<AdminDashboardData>(await fetcher('/api/admin/dashboard', options), 'Unable to load the dashboard.');
+}
+
+export async function fetchAdminAnalytics(fetcher: typeof fetch = fetch) {
+  return readData<AdminAnalytics>(await fetcher('/api/admin/analytics', options), 'Unable to load analytics.');
 }
 
 export async function fetchAdminOrders(fetcher: typeof fetch = fetch) {

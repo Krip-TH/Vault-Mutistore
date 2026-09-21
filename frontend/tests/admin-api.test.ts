@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createAdminProduct, deleteAdminProduct, fetchAdminDashboard, fetchAdminProductOptions, fetchAdminProducts, fetchAdminOrders, updateAdminOrderStatus, updateAdminProduct, uploadAdminProductImage } from '../src/admin/adminApi';
+import { createAdminProduct, deleteAdminProduct, fetchAdminAnalytics, fetchAdminDashboard, fetchAdminProductOptions, fetchAdminProducts, fetchAdminOrders, updateAdminOrderStatus, updateAdminProduct, uploadAdminProductImage } from '../src/admin/adminApi';
 import type { AdminProduct } from '../src/types/admin';
 
 test('admin dashboard and order list use protected same-origin endpoints', async () => {
@@ -83,4 +83,12 @@ test('admin product options use the protected dynamic endpoint', async () => {
   });
   assert.equal(url, '/api/admin/product-options');
   assert.deepEqual(options.businesses[0], { id: 'door', name: 'Door', categories: ['Doors'] });
+});
+
+test('admin analytics uses its protected same-origin endpoint', async () => {
+  let captured:{url:string;credentials?:RequestCredentials}|undefined;
+  const payload={kpis:{total_orders:2},revenue_trend:[],revenue_by_business:[],inventory:[],products_by_business:[],order_statuses:[],top_products:[],kmeans:{products:[],clusters:[]},insights:[],warnings:[],recent_orders:[],business_availability:[]};
+  const result=await fetchAdminAnalytics(async(input,init)=>{captured={url:String(input),credentials:init?.credentials};return new Response(JSON.stringify({data:payload}),{status:200,headers:{'Content-Type':'application/json'}})});
+  assert.equal(result.kpis.total_orders,2);
+  assert.deepEqual(captured,{url:'/api/admin/analytics',credentials:'same-origin'});
 });
