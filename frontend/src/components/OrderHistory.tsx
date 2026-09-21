@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchOrder, fetchOrders } from '../checkout/orderApi';
 import type { Order, OrderSummary } from '../types/order';
 import GalleryImage from './GalleryImage';
+import { orderStatusLabel } from '../orderStatus';
 
 const price = new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' });
 const dateTime = new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short' });
@@ -81,7 +82,7 @@ function OrderList({ orders, loading, error, onRetry, onOpen }: {
       <span className="order-row-primary"><small>Order number</small><strong>{summary.order_no}</strong><time dateTime={summary.created_at}>{dateTime.format(new Date(summary.created_at))}</time></span>
       <span><small>Total</small><strong>{price.format(summary.total)}</strong></span>
       <span><small>Items</small><strong>{summary.item_count}</strong></span>
-      <span><small>Status</small><strong className={`order-status status-${summary.status.toLowerCase()}`}>{summary.status}</strong></span>
+      <span><small>Status</small><strong className={`order-status status-${summary.status.toLowerCase()}`}>{orderStatusLabel(summary.status)}</strong></span>
       <span className="round-arrow" aria-hidden="true">↗</span>
     </button>)}</div>}
   </main>;
@@ -102,7 +103,7 @@ function OrderDetail({ orderNo, order, loading, error, onRetry }: {
   return <main className="orders-page order-detail-page">
     <div className="order-detail-heading">
       <div><p className="eyebrow">ORDER DETAILS</p><h2 id="orders-title">{order.order_no}</h2><time dateTime={order.created_at}>{dateTime.format(new Date(order.created_at))}</time></div>
-      <span className={`order-status status-${order.status.toLowerCase()}`}>{order.status}</span>
+      <span className={`order-status status-${order.status.toLowerCase()}`}>{orderStatusLabel(order.status)}</span>
     </div>
     <div className="order-detail-grid">
       <section className="order-products" aria-labelledby="order-products-title"><h3 id="order-products-title">Products</h3>

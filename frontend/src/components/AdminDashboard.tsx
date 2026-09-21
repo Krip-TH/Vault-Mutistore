@@ -109,21 +109,38 @@ function DashboardView({ data, onOpen }: { data: AdminDashboardData; onOpen: (or
 }
 
 function OrdersView({ orders, onOpen }: { orders: AdminOrderSummary[]; onOpen: (orderNo: string) => void }) {
-  return <div className="admin-content"><section className="admin-section">
-    <div className="admin-section-heading"><div><p className="eyebrow">ORDER MANAGEMENT</p><h3>All customer orders</h3></div><span>{orders.length} orders</span></div>
-    <AdminOrderTable orders={orders} onOpen={onOpen} />
-  </section></div>;
+  const [query, setQuery] = useState('');
+  const [status, setStatus] = useState<'all' | OrderStatus>('all');
+  const filtered = filterAdminOrders(orders, query, status);
+  const metrics = orderMetrics(orders);
+  return <div className="admin-content">
+    <section className="admin-metrics admin-order-metrics" aria-label="Order summary">
+      <article><span>Total orders</span><strong>{metrics.total}</strong></article>
+      <article><span>Pending</span><strong>{metrics.pending}</strong></article>
+      <article><span>Processing / active</span><strong>{metrics.active}</strong></article>
+      <article><span>Delivered</span><strong>{metrics.completed}</strong></article>
+      <article><span>Cancelled</span><strong>{metrics.cancelled}</strong></article>
+    </section>
+    <section className="admin-section">
+      <div className="admin-section-heading"><div><p className="eyebrow">ORDER MANAGEMENT</p><h3>All customer orders</h3></div><span>{filtered.length} of {orders.length} orders</span></div>
+      <div className="admin-order-tools">
+        <label><span>Search orders</span><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Order ID, customer or email" /></label>
+        <label><span>Status</span><select value={status} onChange={event => setStatus(event.target.value as 'all' | OrderStatus)}><option value="all">All statuses</option>{statuses.map(value => <option key={value} value={value}>{statusLabel(value)}</option>)}</select></label>
+      </div>
+      <AdminOrderTable orders={filtered} onOpen={onOpen} emptyMessage="No orders match these filters." />
+    </section>
+  </div>;
 }
 
-function AdminOrderTable({ orders, onOpen }: { orders: AdminOrderSummary[]; onOpen: (orderNo: string) => void }) {
-  if (!orders.length) return <div className="admin-empty"><span>V.</span><h4>No orders yet.</h4></div>;
+function AdminOrderTable({ orders, onOpen, emptyMessage = 'No orders yet.' }: { orders: AdminOrderSummary[]; onOpen: (orderNo: string) => void; emptyMessage?: string }) {
+  if (!orders.length) return <div className="admin-empty"><span>V.</span><h4>{emptyMessage}</h4></div>;
   return <div className="admin-table-wrap"><table className="admin-table">
     <thead><tr><th>Order</th><th>Customer</th><th>Date</th><th>Items</th><th>Total</th><th>Status</th><th /></tr></thead>
     <tbody>{orders.map(order => <tr key={order.order_no}>
       <td><strong>{order.order_no}</strong></td><td>{order.customer_name}<small>{order.customer_email}</small></td>
       <td>{dateTime.format(new Date(order.created_at))}</td><td>{order.item_count}</td><td>{price.format(order.total)}</td>
-      <td><span className={`order-status status-${order.status}`}>{order.status}</span></td>
-      <td><button className="text-button" onClick={() => onOpen(order.order_no)}>Open</button></td>
+      <td><span className={`order-status status-${order.status}`}>{statusLabel(order.status)}</span></td>
+      <td><button className="text-button" onClick={() => onOpen(order.order_no)}>View details</button></td>
     </tr>)}</tbody>
   </table></div>;
 }
@@ -158,12 +175,35 @@ function AdminOrderDetail({ order, onBack, onUpdated }: {
       <aside className="admin-detail-aside">
         <section><p className="eyebrow">CUSTOMER</p><h3>{order.customer.name}</h3><a href={`mailto:${order.customer.email}`}>{order.customer.email}</a><a href={`tel:${order.customer.phone}`}>{order.customer.phone}</a></section>
         <section><p className="eyebrow">SHIPPING</p><address>{address.map((part, index) => <span key={`${part}-${index}`}>{part}</span>)}</address></section>
-        <section><p className="eyebrow">STATUS</p><label className="admin-status"><span>Order status</span><select value={status} onChange={event => setStatus(event.target.value as OrderStatus)}>{statuses.map(value => <option key={value} value={value}>{value}</option>)}</select></label>
-          <button className="primary-button" disabled={saving || status === order.status} onClick={() => void save()}>{saving ? 'Saving…' : 'Update status'}</button>{error && <p className="checkout-error" role="alert">{error}</p>}</section>
-        <dl className="admin-totals"><div><dt>Subtotal</dt><dd>{price.format(order.subtotal)}</dd></div><div><dt>Shipping</dt><dd>{price.format(order.shipping_fee)}</dd></div><div><dt>Discount</dt><dd>−{price.format(order.discount)}</dd></div><div><dt>Total</dt><dd>{price.format(order.total)}</dd></div></dl>
+        <section><p className="eyebrow">STATUS</p><label className="admin-status"><span>Order status</span><select value={status} disabled={order.status === 'completed' || order.status === 'cancelled'} onChange={event => setStatus(event.target.value as OrderStatus)}>{statuses.map(value => <option key={value} value={value}>{statusLabel(value)}</option>)}</select></label>
+          {(order.status === 'completed' || order.status === 'cancelled') && <p className="admin-status-note">This is a terminal status and cannot be changed.</p>}
+          <button className="primary-button" disabled={saving || status === order.status || order.status === 'completed' || order.status === 'cancelled'} onClick={() => void save()}>{saving ? 'Saving…' : 'Update status'}</button>{error && <p className="checkout-error" role="alert">{error}</p>}</section>
+        <dl className="admin-totals"><div><dt>Total items</dt><dd>{order.items.reduce((sum, item) => sum + item.quantity, 0)}</dd></div><div><dt>Subtotal</dt><dd>{price.format(order.subtotal)}</dd></div><div><dt>Shipping</dt><dd>{price.format(order.shipping_fee)}</dd></div><div><dt>Discount</dt><dd>−{price.format(order.discount)}</dd></div><div><dt>Total</dt><dd>{price.format(order.total)}</dd></div></dl>
       </aside>
     </div>
   </div>;
+}
+
+function statusLabel(status: OrderStatus) {
+  return status === 'completed' ? 'Delivered' : status[0].toUpperCase() + status.slice(1);
+}
+
+export function filterAdminOrders(orders: AdminOrderSummary[], query: string, status: 'all' | OrderStatus) {
+  const needle = query.trim().toLocaleLowerCase();
+  return orders.filter(order => (status === 'all' || order.status === status) && (!needle ||
+    order.order_no.toLocaleLowerCase().includes(needle) ||
+    order.customer_name.toLocaleLowerCase().includes(needle) ||
+    order.customer_email.toLocaleLowerCase().includes(needle)));
+}
+
+export function orderMetrics(orders: AdminOrderSummary[]) {
+  return {
+    total: orders.length,
+    pending: orders.filter(order => order.status === 'pending').length,
+    active: orders.filter(order => ['confirmed', 'processing', 'shipped'].includes(order.status)).length,
+    completed: orders.filter(order => order.status === 'completed').length,
+    cancelled: orders.filter(order => order.status === 'cancelled').length,
+  };
 }
 
 function AdminState({ title, detail, action }: { title: string; detail?: string; action?: () => void }) {

@@ -577,6 +577,11 @@ section, #businesses, #search { scroll-margin-top: 32px; }
 .admin-table tbody tr:first-child td { border-top: 0; }
 .admin-table td strong { font: 14px Georgia, serif; font-weight: 400; white-space: nowrap; }
 .admin-table td small { display: block; margin-top: 4px; color: #747d70; overflow-wrap: anywhere; }
+.admin-order-metrics { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.admin-order-tools { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(180px, .35fr); gap: 12px; padding: 0 0 20px; }
+.admin-order-tools label { display: grid; gap: 7px; color: #697267; font-size: 9px; letter-spacing: .08em; text-transform: uppercase; }
+.admin-order-tools input, .admin-order-tools select { min-height: 44px; width: 100%; padding: 0 13px; border: 1px solid #ccd1c6; border-radius: 8px; background: #fff; color: #263a30; font: inherit; letter-spacing: normal; text-transform: none; }
+.admin-status-note { margin: 10px 0; color: #747d70; font-size: 11px; line-height: 1.5; }
 .admin-empty, .admin-state { min-height: 260px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 35px; text-align: center; }
 .admin-empty > span, .admin-state > span { width: 62px; height: 62px; display: grid; place-items: center; border: 1px solid #bec7ba; border-radius: 50%; font: 29px Georgia, serif; }
 .admin-empty h4, .admin-state h3 { margin: 16px 0 7px; font: 25px Georgia, serif; }
@@ -633,6 +638,7 @@ section, #businesses, #search { scroll-margin-top: 32px; }
   .admin-return { display: none; }
   .admin-metrics { grid-template-columns: 1fr 1fr; }
   .admin-metrics article { min-height: 110px; }
+  .admin-order-tools { grid-template-columns: 1fr; }
   .admin-items article { flex-direction: column; }
   .admin-items dl { min-width: 0; width: 100%; }
 }
