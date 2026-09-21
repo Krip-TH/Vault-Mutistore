@@ -4,6 +4,7 @@ import { getMe, postLogin, postLogout, postRegister } from '../controllers/authC
 import { getOrderByNumber, getOrders, postOrder } from '../controllers/orderController.js';
 import { attachUser, requireAuth } from '../middleware/auth.js';
 import { createAdminRouter } from './admin.js';
+import { createAiRouter } from './ai.js';
 
 const router = Router();
 router.use(attachUser);
@@ -19,4 +20,5 @@ router.post('/auth/login', postLogin);
 router.post('/auth/logout', postLogout);
 router.get('/auth/me', getMe);
 router.use('/admin', createAdminRouter());
+router.use('/ai', createAiRouter());
 export default router;

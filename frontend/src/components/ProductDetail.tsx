@@ -5,6 +5,8 @@ import { useCart } from '../cart/CartContext';
 import { cartKey } from '../cart/cartState';
 import ProductGallery from './ProductGallery';
 import { StockBadge } from './ProductPresentation';
+import RelatedProducts from './RelatedProducts';
+import AiDescription from './AiDescription';
 
 interface Props {
   product: Product;
@@ -12,11 +14,12 @@ interface Props {
   favorite: boolean;
   onFavorite: () => void;
   inventoryAvailable?: boolean;
+  onSelectProduct?: (product: Product) => void;
 }
 
 const price = new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' });
 
-export default function ProductDetail({ product, onClose, favorite, onFavorite, inventoryAvailable = true }: Props) {
+export default function ProductDetail({ product, onClose, favorite, onFavorite, inventoryAvailable = true, onSelectProduct }: Props) {
   const cart = useCart();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const addedTimerRef = useRef<number>();
@@ -87,6 +90,7 @@ export default function ProductDetail({ product, onClose, favorite, onFavorite, 
         {knownPrice && <p className="detail-price">{price.format(product.price)} <span>THB</span></p>}
         {(status || knownStock) && <div className="detail-stock"><StockBadge status={product.status} />{knownStock && <p>{stockLabel} available</p>}</div>}
         {description && <p className="detail-description">{description}</p>}
+        <AiDescription product={product} />
         <div className="purchase-panel">
           {!inventoryAvailable && <p className="detail-availability" role="status">Current inventory is unavailable. Return to the collection and refresh to check again.</p>}
           {cartQuantity > purchase.stock && knownStock && <p className="detail-availability" role="status">Your cart exceeds the latest available stock. Remove this item to choose a new quantity.</p>}
@@ -142,5 +146,6 @@ export default function ProductDetail({ product, onClose, favorite, onFavorite, 
         {business && <p>Inventory as received from {business}. Availability may change.</p>}
       </section>}
     </div>
+    {onSelectProduct && <RelatedProducts product={product} onSelectProduct={onSelectProduct} />}
   </dialog>;
 }

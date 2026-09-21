@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { BusinessAvailability, BusinessType, Product, ProductsResponse, StockStatus } from './types/product';
 import { ProductCard, ProductImage } from './components/ProductPresentation';
 import ProductDetail from './components/ProductDetail';
+import AiSearchBar from './components/AiSearchBar';
+import AiChatWidget from './components/AiChatWidget';
 import CartDrawer from './components/CartDrawer';
 import Checkout from './components/Checkout';
 import OrderHistory from './components/OrderHistory';
@@ -261,6 +263,7 @@ function Storefront({ route, navigate }: { route: AppRoute; navigate: (route: Ap
         <section id="explore" className="discovery" aria-labelledby="collection-title">
           <div className="section-heading"><div><p className="eyebrow">EXPLORE VAULT</p><h2 id="collection-title">Find your next everyday.</h2></div><p>Distinct businesses. Endless possibilities.</p></div>
           <div id="businesses" className="business-chips" role="group" aria-label="Filter by business"><button aria-pressed={business === 'all'} onClick={() => setBusiness('all')}>All Businesses</button>{businessOptions.map(option => <button key={option.value} aria-pressed={business === option.value} onClick={() => setBusiness(option.value)}>{option.label}</button>)}</div>
+          <AiSearchBar onSelectProduct={setSelected} />
           <div className="filter-bar">
             <label className="search-field"><span className="sr-only">Search by product name</span><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Search for something special…" value={search} onChange={event => setSearch(event.target.value)} /></label>
             <label className="select-field"><span>Category</span><select value={category} onChange={event => setCategory(event.target.value)}><option value="all">All categories</option>{categories.map(value => <option key={value} value={value}>{value}</option>)}</select></label>
@@ -283,13 +286,15 @@ function Storefront({ route, navigate }: { route: AppRoute; navigate: (route: Ap
       {selected && <ProductDetail key={productKey(selected)} product={selected} onClose={() => setSelected(null)}
         inventoryAvailable={inventoryAvailable}
         favorite={favorites.favorites.includes(productKey(selected))}
-        onFavorite={() => setFavorites(current => ({ favorites: current.favorites.includes(productKey(selected)) ? current.favorites.filter(key => key !== productKey(selected)) : [...current.favorites, productKey(selected)] }))} />}
+        onFavorite={() => setFavorites(current => ({ favorites: current.favorites.includes(productKey(selected)) ? current.favorites.filter(key => key !== productKey(selected)) : [...current.favorites, productKey(selected)] }))}
+        onSelectProduct={setSelected} />}
       <CartDrawer onClose={() => { cart.closeCart(); if (route === 'cart') navigate('home'); }} onExplore={() => { navigate('products'); document.querySelector('#explore')?.scrollIntoView({ behavior: 'smooth' }); }} onCheckout={() => { navigate('home'); openCheckout(); }} />
       {checkoutOpen && <Checkout onClose={() => setCheckoutOpen(false)}
         onContinue={() => document.querySelector('#explore')?.scrollIntoView({ behavior: 'smooth' })}
         onViewOrder={openOrders} />}
       {ordersOpen && <OrderHistory key={selectedOrderNo || 'history'} initialOrderNo={selectedOrderNo}
         onClose={() => { setSelectedOrderNo(undefined); navigate('home'); }} />}
+      <AiChatWidget />
     </div>
   );
 }

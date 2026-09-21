@@ -123,10 +123,38 @@ Order numbers retain the historical `MDG-` prefix for compatibility with existin
 | GET | `/api/admin/orders` | Admin-only list of all orders |
 | GET | `/api/admin/orders/:orderNo` | Admin-only order details |
 | PATCH | `/api/admin/orders/:orderNo/status` | Admin-only validated status update |
+| POST | `/api/ai/search` | Natural-language product search (AI-derived filters, applied to real inventory) |
+| POST | `/api/ai/chat` | Shopping assistant chat in Thai; includes the signed-in user's own orders when logged in |
+| GET | `/api/ai/recommend/:productId` | Four related products for a given product, chosen by AI from real inventory (optional `?business=` to disambiguate ids shared across businesses) |
+| POST | `/api/ai/describe` | Short AI-generated Thai product description for a product with no (or very short) description |
 
 All order endpoints require authentication. Customer order reads are scoped by authenticated user ID. Every `/api/admin/*` endpoint additionally requires the signed `admin` role.
 
 `GET /api/products` includes one `businesses` availability entry per adapter. `online` with zero products means the upstream answered successfully with no usable inventory; `unavailable` means the request failed or could not be parsed. Products from successful adapters remain in `data`.
+
+## Customer-facing AI features
+
+The storefront (customer side only — no admin page uses this) calls a small set of `/api/ai/*` endpoints backed by the Gemini API, isolated behind `backend/src/services/ai/geminiClient.ts` so the provider can be swapped later without touching any feature code.
+
+To enable it, set two variables in your local `.env` (never commit this file):
+
+```
+GEMINI_API_KEY=your-real-key-here
+GEMINI_MODEL=gemini-2.5-flash
+```
+
+Which model names are available depends on your Google Cloud project (older projects may still use `gemini-2.5-flash`; newer ones are pointed at `gemini-3.6-flash` or later) — if you see a `404 ... no longer available` error in the backend logs, switch `GEMINI_MODEL` to whatever current model name Google's error message recommends.
+
+Restart the backend (`docker compose up -d backend` or `npm run dev`) after changing either value.
+
+- **`GEMINI_API_KEY` is optional.** If it is blank or unset, the backend still starts and runs normally — every `/api/ai/*` route responds with `503 AI_NOT_CONFIGURED` instead of crashing the app.
+- The AI never invents products, orders, or ids. Search only proposes structured filters, chat is only given the real trimmed product catalog (and the signed-in user's own real orders) as context, and recommendations may only reference product ids that actually exist in current inventory — in every case the backend does the real product/order lookup, filtering, and mapping in TypeScript, never the model.
+- The chat endpoint (`POST /api/ai/chat`) never trusts a `userId` from the request body. It only ever looks up orders for the user id from the verified session cookie, and only when one is present; guests get product help but are asked to sign in for order questions.
+- Every AI response the model returns as JSON is validated field-by-field before use — an unexpected shape falls back to safe defaults rather than being trusted directly.
+- `/api/ai/*` is rate-limited per IP (20 requests/minute) to protect the API quota.
+- Recommendations and descriptions are cached in-memory per product for about an hour (`backend/src/services/ai/cache.ts`) to reduce repeat Gemini calls; the cache stores only the AI's decision (which product ids / which text), and re-reads live price/stock from inventory on every request, so cached results never show stale prices or stock levels.
+- On the frontend, every AI-powered component (`AiSearchBar`, `AiChatWidget`, `RelatedProducts`, `AiDescription`) fails silently and hides itself if its request ever fails — a missing or invalid key, or a transient error, never breaks the storefront.
+- The AI-generated product description is visually labeled "AI-generated description" so shoppers can tell it did not come from the store, and it is only requested for products with no description or one shorter than 30 characters.
 
 ## Build and test
 
