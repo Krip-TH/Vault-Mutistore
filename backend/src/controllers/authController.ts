@@ -15,7 +15,10 @@ export async function postRegister(request: Request, response: Response): Promis
   try {
     const { user, token } = await registerCustomer(request.body);
     response.cookie(AUTH_COOKIE_NAME, token, { ...cookieOptions, maxAge: AUTH_COOKIE_MAX_AGE_MS });
-    response.status(201).json({ data: user });
+    // The cookie is what the web app uses. `token` is included in the body too so a
+    // client with no cookie jar (the mobile app) can store it and send it back as
+    // `Authorization: Bearer <token>` instead — see middleware/auth.ts.
+    response.status(201).json({ data: user, token });
   } catch (error) {
     sendAuthError(response, error);
   }
@@ -25,7 +28,7 @@ export async function postLogin(request: Request, response: Response): Promise<v
   try {
     const { user, token } = await login(request.body);
     response.cookie(AUTH_COOKIE_NAME, token, { ...cookieOptions, maxAge: AUTH_COOKIE_MAX_AGE_MS });
-    response.json({ data: user });
+    response.json({ data: user, token });
   } catch (error) {
     sendAuthError(response, error);
   }

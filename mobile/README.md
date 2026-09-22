@@ -1,11 +1,23 @@
 # VAULT Mobile — React Native pilot
 
-A one-screen React Native (Expo) proof of concept that reproduces the web storefront's
-product collection screen. It exists to answer one question before the team commits to a
+A React Native (Expo) proof of concept that reproduces the web storefront's sign-in and
+product collection screens. It exists to answer one question before the team commits to a
 mobile app: **how closely can React Native match the existing web UI, and what does it cost?**
 
-This is a pilot, not a port. It reuses the existing Express backend unchanged and
-re-implements only the product listing and product detail views.
+This is a pilot, not a port. It reuses the existing Express backend — extended, not
+replaced, see "Auth" below — and re-implements only sign-in/register and the product
+listing and detail views. Cart, checkout, orders, AI features and admin are not built yet.
+
+## Auth
+
+The web session uses an httpOnly cookie, which a bare `fetch` on React Native cannot
+store or send automatically the way a browser does. So login and register now also return
+the same JWT in the JSON response body (`{ data: user, token }`) alongside the cookie —
+**the web app's cookie flow is unchanged**; this is additive only. The backend accepts
+either the cookie or an `Authorization: Bearer <token>` header
+(`backend/src/middleware/auth.ts`), and the app stores the token with `expo-secure-store`
+(the mobile equivalent of an httpOnly cookie: encrypted, not readable by other apps) and
+sends it as a Bearer header on every request that needs it.
 
 ## Running it on a phone
 
@@ -33,8 +45,15 @@ re-implements only the product listing and product detail views.
 If products do not load, the phone almost always cannot reach the backend: confirm both
 devices are on the same Wi-Fi and that Windows Firewall allows inbound TCP on port 3000.
 
+Since SDK 57, **Expo Go on iOS requires signing in**, on both the computer (`npx expo
+login`) and the Expo Go app itself, with the same account — this is an Expo policy change,
+unrelated to this project. See the [Expo changelog](https://expo.dev/changelog/expo-go-57-login).
+
 ## What this pilot covers
 
+- Sign in and create an account, matching the web's validation (name required to
+  register, a valid email, an 8+ character password) and error copy. The session
+  persists across app restarts.
 - Product collection screen: brand header, section heading, business filter chips,
   two-column product grid, results count, and the partial-inventory notice.
 - Product card: image with fallback tile, business pill, category, name, THB price,

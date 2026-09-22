@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { fetchProducts } from '../api';
+import { useAuth } from '../auth/AuthContext';
 import ProductCard from '../components/ProductCard';
 import ProductDetailModal from '../components/ProductDetailModal';
 import { colors, serif } from '../theme';
@@ -30,6 +31,7 @@ const productKey = (product: Product) => `${product.business}:${product.id}`;
 
 export default function ProductsScreen() {
   const insets = useSafeAreaInsets();
+  const { user, logout } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [availability, setAvailability] = useState<BusinessAvailability[]>([]);
   const [loading, setLoading] = useState(true);
@@ -125,10 +127,18 @@ export default function ProductsScreen() {
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
       <View style={styles.headerBar}>
-        <View style={styles.brandMark}>
-          <Text style={styles.brandMarkText}>V.</Text>
+        <View style={styles.brandGroup}>
+          <View style={styles.brandMark}>
+            <Text style={styles.brandMarkText}>V.</Text>
+          </View>
+          <Text style={styles.brandName}>VAULT</Text>
         </View>
-        <Text style={styles.brandName}>VAULT</Text>
+        <View style={styles.accountGroup}>
+          {!!user && <Text style={styles.accountName} numberOfLines={1}>{user.name}</Text>}
+          <Pressable onPress={() => void logout()} hitSlop={8}>
+            <Text style={styles.logoutText}>Log out</Text>
+          </Pressable>
+        </View>
       </View>
 
       <FlatList
@@ -174,12 +184,17 @@ const styles = StyleSheet.create({
   headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     gap: 12,
     paddingHorizontal: 22,
     paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: colors.headerBorder,
   },
+  brandGroup: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  accountGroup: { flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 1 },
+  accountName: { fontSize: 11, color: colors.muted, maxWidth: 90 },
+  logoutText: { fontSize: 11, color: colors.darkGreen, fontWeight: '600', textDecorationLine: 'underline' },
   brandMark: {
     width: 38,
     height: 38,

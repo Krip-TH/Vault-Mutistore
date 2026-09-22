@@ -34,3 +34,21 @@ export interface ProductsResponse {
   source: string;
   businesses?: BusinessAvailability[];
 }
+
+export type UserRole = 'customer' | 'admin';
+
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+  role: UserRole;
+}
+
+export interface AuthResponse {
+  data: User;
+  token: string;
+}
+
+export interface ApiErrorResponse {
+  error?: { code?: string; message?: string };
+}
