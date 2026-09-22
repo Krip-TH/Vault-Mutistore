@@ -143,8 +143,11 @@ export const adminRepository: AdminRepository = {
   },
 
   async updateOrderStatus(orderNo, status) {
+    // completed_at is the start of the claim window, so it is stamped the first time an
+    // order completes and left untouched afterwards.
     const [result] = await pool.execute<ResultSetHeader>(
-      'UPDATE orders SET status = ? WHERE order_no = ?',
+      `UPDATE orders SET status = ?, completed_at = ${status === 'completed' ? 'COALESCE(completed_at, CURRENT_TIMESTAMP)' : 'completed_at'}
+       WHERE order_no = ?`,
       [status, orderNo],
     );
     return result.affectedRows === 1;

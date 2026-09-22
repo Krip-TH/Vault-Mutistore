@@ -24,7 +24,7 @@ export interface AdminDashboardData {
 }
 
 export type AdminOrder = Order;
-export type AdminView = 'dashboard' | 'products' | 'orders' | 'users' | 'businesses';
+export type AdminView = 'dashboard' | 'products' | 'orders' | 'claims' | 'users' | 'businesses';
 
 export interface AdminProduct {
   id: string;

@@ -1,5 +1,6 @@
 import type { AdminAnalytics, AdminDashboardData, AdminOrder, AdminOrderSummary, AdminProduct, AdminProductInput, ProductOptions,ManagedUser,ManagedBusiness } from '../types/admin';
 import type { OrderStatus } from '../types/order';
+import type { AdminClaim, AdminClaimFilterInput, AdminClaimSummary, ClaimStats, ClaimStatus } from '../types/claim';
 
 type ErrorResponse = { error?: { message?: string } };
 
@@ -80,6 +81,37 @@ export async function deleteAdminProduct(product: AdminProduct, fetcher: typeof 
     method: 'DELETE', credentials: 'same-origin', headers: { Accept: 'application/json' },
   });
   if (!response.ok) await readData<never>(response, 'Unable to delete the product.');
+}
+
+export async function fetchAdminClaims(filters: Partial<AdminClaimFilterInput> = {}, fetcher: typeof fetch = fetch) {
+  const search = new URLSearchParams();
+  for (const key of ['status', 'business', 'search', 'from', 'to'] as const) {
+    const value = filters[key];
+    if (value && value !== 'all') search.set(key, value);
+  }
+  const suffix = search.size ? `?${search}` : '';
+  return readData<AdminClaimSummary[]>(await fetcher(`/api/admin/claims${suffix}`, options), 'Unable to load claims.');
+}
+
+export async function fetchAdminClaim(claimNumber: string, fetcher: typeof fetch = fetch) {
+  return readData<AdminClaim>(await fetcher(`/api/admin/claims/${encodeURIComponent(claimNumber)}`, options), 'Unable to load this claim.');
+}
+
+export async function fetchAdminClaimStats(fetcher: typeof fetch = fetch) {
+  return readData<ClaimStats>(await fetcher('/api/admin/claims/stats', options), 'Unable to load claim statistics.');
+}
+
+export async function updateAdminClaimStatus(
+  claimNumber: string,
+  update: { status: ClaimStatus; note?: string; note_visibility?: 'customer' | 'internal'; admin_note?: string },
+  fetcher: typeof fetch = fetch,
+) {
+  return readData<AdminClaim>(await fetcher(`/api/admin/claims/${encodeURIComponent(claimNumber)}/status`, {
+    method: 'PATCH',
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    body: JSON.stringify(update),
+  }), 'Unable to update the claim status.');
 }
 
 export async function uploadAdminProductImage(file: File, fetcher: typeof fetch = fetch) {

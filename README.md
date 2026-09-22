@@ -36,7 +36,7 @@ See [the API contract](docs/API_CONTRACT.md) for normalized fields and [the memb
 ```text
 VAULT/
 |-- frontend/            React storefront, customer flows, and admin dashboard
-|-- backend/             Express API, authentication, orders, admin, and adapters
+|-- backend/             Express API, authentication, orders, claims, admin, and adapters
 |-- database/init.sql    Complete fresh-install MySQL schema
 |-- database/migrations/ Historical and forward database migrations
 |-- docs/                API contract and integration guide
@@ -92,6 +92,14 @@ Get-Content database/migrations/005_user_profile.sql | docker compose exec -T my
 
 Sign-in and account lookup do not depend on the new columns, so an un-migrated database still logs in; only the Profile page reports an error until the migration is applied.
 
+`database/migrations/006_claims.sql` is a one-time forward migration for the product claim system. It adds `orders.completed_at` (backfilled from `updated_at` for orders already completed) and the `claims`, `claim_items`, `claim_evidence`, `claim_status_history`, and `claim_number_sequences` tables. Apply it once before using the claim pages; fresh installs get the same schema from `init.sql`:
+
+```powershell
+Get-Content database/migrations/006_claims.sql | docker compose exec -T mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD"'
+```
+
+Ordering and checkout do not touch these tables, so an un-migrated database keeps working; only the claim pages report an error until the migration is applied.
+
 Changing `MYSQL_DATABASE` alone does not create or copy data in an existing volume. The non-destructive `database/migrate-to-vault.sh` utility copies an absent or empty target, verifies a populated target without overwriting it, preserves the legacy source database as rollback, and refreshes the application-user grant. Review its output before switching runtime configuration.
 
 The seeded local administrator is documented in `database/init.sql`. Change its password before using the project outside an isolated development environment.
@@ -110,6 +118,34 @@ External URLs are configured with `DOOR_API_URL`, `PLUG_API_URL`, `BRANDNAME_API
 - Backend middleware enforces authentication and administrator roles. Frontend route guards are only a usability layer.
 - Historical orders with `NULL` ownership remain visible to administrators but are intentionally hidden from customer endpoints.
 
+## Product claims and warranty
+
+A claim and warranty document is available for every order the customer owns; an actual claim record is created only when the customer submits one. The two are deliberately separate: the document is generated on demand from the stored order snapshot, so reprinting an old order never picks up today's catalogue prices.
+
+Customer path: **My Orders → open an order → Claim / Warranty**, which offers *View Claim / Warranty Document* (printable, and "Save as PDF" through the browser print dialog) and *Submit Claim*. Submitted claims are tracked under **My Claims**. Administrators work in **Admin → Claims**, and claim counts appear on the Admin Dashboard.
+
+Claim numbers use the format `CLM-YYYYMMDD-000001`. They are allocated by the backend inside the claim transaction from the `claim_number_sequences` table, never taken from the client, and the row lock plus connection-scoped `LAST_INSERT_ID()` keeps concurrent submissions from sharing a number. The date part is UTC, matching the existing `MDG-` order numbers.
+
+Statuses and the allowed transitions are defined once in `backend/src/types/claim.ts` and enforced by the backend on every update; the frontend copy in `frontend/src/claims/claimStatus.ts` only decides which controls to draw.
+
+```
+submitted ──→ under_review ──→ approved ──→ processing ──→ completed
+    │              │
+    │              ├──→ rejected        (terminal)
+    └──────────────┴──→ cancelled       (terminal)
+```
+
+- `rejected`, `completed`, and `cancelled` are terminal; nothing reopens them.
+- Customers may only move a claim to `cancelled`, and only from `submitted` or `under_review`.
+- Every transition writes a `claim_status_history` row recording the previous status, the new status, who changed it, and the note.
+- Notes are explicitly typed. A customer-visible note is also stored on `claims.admin_note` and shown to the customer; a note marked internal stays in the history and is never returned by a customer-facing endpoint.
+
+Claimable quantity is computed per order line: claims in `submitted`, `under_review`, `approved`, `processing`, or `completed` reserve their units, while `rejected` and `cancelled` claims release them so those units can be claimed again. The total claimed across active claims can never exceed the quantity purchased.
+
+Evidence photos are JPEG, PNG, or WEBP, up to 5 files of 5 MB each, and at least one is required. The client filename is discarded entirely — files are stored under a generated UUID name in `backend/uploads/claims`, and the declared MIME type is confirmed against the file's magic bytes. Unlike product images, evidence is **not** served statically: `GET /api/claims/:claimNo/evidence/:id` checks ownership (or admin role) before streaming the file.
+
+`CLAIM_WINDOW_DAYS` controls how long a claim may be raised, counted from `orders.completed_at` or, for an order that has only shipped, from the order date. It defaults to 90; set it to `0` to remove the deadline. Claims are accepted only for orders in `shipped` or `completed` status.
+
 Order numbers retain the historical `MDG-` prefix for compatibility with existing records. The session cookie and browser-storage keys also retain legacy names so upgrades do not invalidate sessions, carts, or favorites.
 
 ## API endpoints
@@ -127,16 +163,27 @@ Order numbers retain the historical `MDG-` prefix for compatibility with existin
 | POST | `/api/orders` | Authenticated checkout with live inventory validation |
 | GET | `/api/orders` | List the signed-in customer’s newest orders |
 | GET | `/api/orders/:orderNo` | Retrieve an order owned by the signed-in customer |
+| GET | `/api/orders/:orderNo/warranty-document` | Claim and warranty document built from the order snapshot |
+| GET | `/api/orders/:orderNo/claimable-items` | Order lines with the units still available to claim |
+| POST | `/api/claims` | Submit a product claim with evidence photos (multipart) |
+| GET | `/api/claims` | List the signed-in customer’s claims (paginated, filterable by status) |
+| GET | `/api/claims/:claimNo` | Claim details with the customer-visible status timeline |
+| POST | `/api/claims/:claimNo/cancel` | Cancel a claim that is still `submitted` or `under_review` |
+| GET | `/api/claims/:claimNo/evidence/:id` | Stream one evidence photo to its owner or an admin |
 | GET | `/api/admin/dashboard` | Admin-only order and customer statistics |
 | GET | `/api/admin/orders` | Admin-only list of all orders |
 | GET | `/api/admin/orders/:orderNo` | Admin-only order details |
 | PATCH | `/api/admin/orders/:orderNo/status` | Admin-only validated status update |
+| GET | `/api/admin/claims` | Admin-only claim list with status, business, date, and keyword filters |
+| GET | `/api/admin/claims/stats` | Admin-only claim counts for the dashboard |
+| GET | `/api/admin/claims/:claimNo` | Admin-only claim details including internal notes and full history |
+| PATCH | `/api/admin/claims/:claimNo/status` | Admin-only status change enforced by the claim state machine |
 | POST | `/api/ai/search` | Natural-language product search (AI-derived filters, applied to real inventory) |
 | POST | `/api/ai/chat` | Shopping assistant chat in Thai; includes the signed-in user's own orders when logged in |
 | GET | `/api/ai/recommend/:productId` | Four related products for a given product, chosen by AI from real inventory (optional `?business=` to disambiguate ids shared across businesses) |
 | POST | `/api/ai/describe` | Short AI-generated Thai product description for a product with no (or very short) description |
 
-All order endpoints require authentication. Customer order reads are scoped by authenticated user ID. Every `/api/admin/*` endpoint additionally requires the signed `admin` role.
+All order and claim endpoints require authentication. Customer order and claim reads are scoped by authenticated user ID, and another customer's record is reported as `404 NOT_FOUND` rather than `403`, so the API never confirms that an unrelated order or claim exists. Every `/api/admin/*` endpoint additionally requires the signed `admin` role.
 
 `GET /api/products` includes one `businesses` availability entry per adapter. `online` with zero products means the upstream answered successfully with no usable inventory; `unavailable` means the request failed or could not be parsed. Products from successful adapters remain in `data`.
 

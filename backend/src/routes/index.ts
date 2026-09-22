@@ -5,6 +5,7 @@ import { getOrderByNumber, getOrders, postOrder } from '../controllers/orderCont
 import { attachUser, requireAuth } from '../middleware/auth.js';
 import { createAdminRouter } from './admin.js';
 import { createAiRouter } from './ai.js';
+import { createClaimRouter, createOrderClaimRoutes } from './claims.js';
 import { createProfileRouter } from './profile.js';
 
 const router = Router();
@@ -16,6 +17,8 @@ router.get('/stock/summary', getStockSummary);
 router.post('/orders', requireAuth, postOrder);
 router.get('/orders', requireAuth, getOrders);
 router.get('/orders/:orderNo', requireAuth, getOrderByNumber);
+router.use('/orders', createOrderClaimRoutes());
+router.use('/claims', createClaimRouter());
 router.post('/auth/register', postRegister);
 router.post('/auth/login', postLogin);
 router.post('/auth/logout', postLogout);
