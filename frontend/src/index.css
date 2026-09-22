@@ -159,6 +159,19 @@ section, #businesses, #search { scroll-margin-top: 32px; }
 .empty-state h3 { font: 32px Georgia, serif; margin: 14px 0; }
 .empty-state p { color: #777c70; font-size: 13px; }
 .empty-state .primary-button { margin-top: 24px; }
+
+/* ---------------------------------------------------------- best sellers */
+.best-sellers-page { min-height: calc(100vh - 80px); padding-bottom: 80px; }
+.best-sellers-hero { max-width: 760px; padding: clamp(54px, 8vw, 110px) 0 clamp(44px, 6vw, 82px); }
+.best-sellers-hero h1 { margin: 12px 0 18px; font: clamp(48px, 8vw, 92px)/.95 Georgia, serif; font-weight: 400; letter-spacing: -.055em; }
+.best-sellers-hero > p:last-child { max-width: 570px; color: #697267; font-size: 13px; line-height: 1.8; }
+.best-sellers-grid { margin: 0; padding: 0; list-style: none; }
+.best-seller-item { position: relative; display: flex; min-width: 0; flex-direction: column; }
+.best-seller-item .product-card { flex: 1; }
+.best-seller-rank { min-height: 42px; display: flex; align-items: baseline; gap: 9px; padding: 0 4px 10px; }
+.best-seller-rank strong { font: 22px Georgia, serif; font-weight: 400; }
+.best-seller-rank span { padding: 4px 7px; border-radius: 999px; background: #314b3a; color: #fff; font-size: 7px; font-weight: 600; letter-spacing: .09em; text-transform: uppercase; }
+.best-seller-rank small { margin-left: auto; color: #747d70; font-size: 9px; }
 .site-footer { border-top: 1px solid #deded3; padding: 30px 0 45px; display: flex; align-items: center; justify-content: space-between; gap: 20px; font-size: 11px; color: #72796b; }
 .footer-brand { font-size: 22px; color: #294638; }
 .mobile-nav { display: none; }

@@ -21,6 +21,7 @@ function dependencies(overrides: Partial<DatabaseToolDependencies> = {}): Partia
     getClaims: async () => ({ claims: [], total: 0, page: 1, page_size: 10 }),
     getClaim: async () => { throw new ApiError(404, 'CLAIM_NOT_FOUND', 'Claim not found.'); },
     getWarranty: async (_userId, orderNo) => ({ order_no: orderNo, eligible: true } as never),
+    getBestSellers: async () => [{ rank: 1, units_sold: 12, product: products[1] }],
     ...overrides,
   };
 }
@@ -67,6 +68,16 @@ test('claim and warranty lookup is scoped to the signed-in user', async () => {
 test('unknown products return found false', async () => {
   const result = await createDatabaseToolExecutor(null, dependencies())({ name: 'get_product_details', args: { product_id: 'missing', business: 'vault' } });
   assert.deepEqual(result, { found: false });
+});
+
+test('best seller tool reuses the shared service and supports business and limit filters', async () => {
+  let query: unknown;
+  const execute = createDatabaseToolExecutor(null, dependencies({ getBestSellers: async value => {
+    query = value; return [{ rank: 1, units_sold: 12, product: products[1] }];
+  } }));
+  const result = await execute({ name: 'get_best_sellers', args: { business: 'vault', limit: 5 } });
+  assert.deepEqual(query, { business: 'vault', limit: 5 });
+  assert.equal((result.best_sellers as unknown[]).length, 1);
 });
 
 test('database failures do not expose query or credential details in controller-facing errors', async () => {
