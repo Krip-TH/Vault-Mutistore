@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from '@google/genai';
-import type { Content, GenerateContentConfig, Schema } from '@google/genai';
+import type { Content, FunctionCall, FunctionDeclaration, GenerateContentConfig, Part, Schema } from '@google/genai';
 import { ApiError } from '../../errors/apiError.js';
 
 export { Type };
@@ -132,4 +132,53 @@ export async function generateChatReply({
 }: GenerateChatReplyOptions): Promise<string> {
   const contents: Content[] = turns.map(turn => ({ role: turn.role, parts: [{ text: turn.text }] }));
   return callModel(contents, { systemInstruction }, timeoutMs);
+}
+
+export interface GenerateToolChatReplyOptions extends GenerateChatReplyOptions {
+  tools: FunctionDeclaration[];
+  executeTool: (call: FunctionCall) => Promise<Record<string, unknown>>;
+  maxIterations?: number;
+}
+
+/** Runs a bounded Gemini function-calling loop. Tool execution remains entirely in VAULT. */
+export async function generateToolChatReply({
+  turns, systemInstruction, tools, executeTool, timeoutMs = DEFAULT_TIMEOUT_MS, maxIterations = 4,
+}: GenerateToolChatReplyOptions): Promise<string> {
+  const instance = requireClient();
+  const contents: Content[] = turns.map(turn => ({ role: turn.role, parts: [{ text: turn.text }] }));
+  for (let iteration = 0; iteration < maxIterations; iteration += 1) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await instance.models.generateContent({
+        model: modelName(), contents,
+        config: { systemInstruction, tools: [{ functionDeclarations: tools }], abortSignal: controller.signal },
+      });
+      const calls = response.functionCalls ?? [];
+      if (!calls.length) {
+        const text = response.text?.trim();
+        if (!text) throw new ApiError(502, 'AI_EMPTY_RESPONSE', 'The AI assistant returned an empty response.');
+        return text;
+      }
+      const modelContent = response.candidates?.[0]?.content;
+      contents.push(modelContent ?? { role: 'model', parts: calls.map(call => ({ functionCall: call } as Part)) });
+      const results = await Promise.all(calls.map(async call => {
+        let toolResult: Record<string, unknown>;
+        try {
+          toolResult = await executeTool(call);
+        } catch (error) {
+          toolResult = error instanceof ApiError
+            ? { error: { code: error.code, message: error.message } }
+            : { error: { code: 'DATA_UNAVAILABLE', message: 'The requested VAULT data could not be retrieved.' } };
+        }
+        return { functionResponse: { id: call.id, name: call.name, response: toolResult } } as Part;
+      }));
+      contents.push({ role: 'user', parts: results });
+    } catch (error) {
+      throw toApiError(error);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  throw new ApiError(502, 'AI_TOOL_LIMIT', 'The AI assistant could not complete the request safely.');
 }
