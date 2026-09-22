@@ -15,8 +15,10 @@ import { useAuth } from '../auth/AuthContext';
 import { useCart } from '../cart/CartContext';
 import CartModal from '../components/CartModal';
 import CheckoutModal from '../components/CheckoutModal';
+import OrdersModal from '../components/OrdersModal';
 import ProductCard from '../components/ProductCard';
 import ProductDetailModal from '../components/ProductDetailModal';
+import ProfileModal from '../components/ProfileModal';
 import { colors, serif } from '../theme';
 import type { BusinessAvailability, BusinessType, Product } from '../types';
 
@@ -34,7 +36,7 @@ const productKey = (product: Product) => `${product.business}:${product.id}`;
 
 export default function ProductsScreen() {
   const insets = useSafeAreaInsets();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const cart = useCart();
   const [products, setProducts] = useState<Product[]>([]);
   const [availability, setAvailability] = useState<BusinessAvailability[]>([]);
@@ -45,6 +47,8 @@ export default function ProductsScreen() {
   const [selected, setSelected] = useState<Product | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [ordersOpen, setOrdersOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
 
   const load = useCallback(async () => {
     setError(null);
@@ -147,7 +151,9 @@ export default function ProductsScreen() {
           <Text style={styles.brandName}>VAULT</Text>
         </View>
         <View style={styles.accountGroup}>
-          {!!user && <Text style={styles.accountName} numberOfLines={1}>{user.name}</Text>}
+          <Pressable onPress={() => setOrdersOpen(true)} hitSlop={8}>
+            <Text style={styles.linkText}>Orders</Text>
+          </Pressable>
           <Pressable
             onPress={() => setCartOpen(true)}
             hitSlop={8}
@@ -155,8 +161,10 @@ export default function ProductsScreen() {
           >
             <Text style={styles.cartText}>Cart · {cart.itemCount}</Text>
           </Pressable>
-          <Pressable onPress={() => void logout()} hitSlop={8}>
-            <Text style={styles.logoutText}>Log out</Text>
+          <Pressable onPress={() => setProfileOpen(true)} hitSlop={8} accessibilityLabel={user ? `Open profile for ${user.name}` : 'Open profile'}>
+            <View style={styles.profileDot}>
+              <Text style={styles.profileDotText}>{(user?.name || '?').trim().charAt(0).toUpperCase()}</Text>
+            </View>
           </Pressable>
         </View>
       </View>
@@ -208,6 +216,8 @@ export default function ProductsScreen() {
         onClose={() => setCheckoutOpen(false)}
         onContinueShopping={() => setCheckoutOpen(false)}
       />
+      <OrdersModal visible={ordersOpen} onClose={() => setOrdersOpen(false)} />
+      <ProfileModal visible={profileOpen} onClose={() => setProfileOpen(false)} />
     </View>
   );
 }
@@ -228,9 +238,10 @@ const styles = StyleSheet.create({
   },
   brandGroup: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   accountGroup: { flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 1 },
-  accountName: { fontSize: 11, color: colors.muted, maxWidth: 90 },
+  linkText: { fontSize: 11, color: colors.text, fontWeight: '600' },
   cartText: { fontSize: 11, color: colors.text, fontWeight: '600' },
-  logoutText: { fontSize: 11, color: colors.darkGreen, fontWeight: '600', textDecorationLine: 'underline' },
+  profileDot: { width: 26, height: 26, borderRadius: 13, backgroundColor: colors.darkGreen, alignItems: 'center', justifyContent: 'center' },
+  profileDotText: { fontSize: 11, color: '#fff', fontWeight: '600' },
   brandMark: {
     width: 38,
     height: 38,

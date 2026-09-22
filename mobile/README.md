@@ -5,8 +5,9 @@ product collection screens. It exists to answer one question before the team com
 mobile app: **how closely can React Native match the existing web UI, and what does it cost?**
 
 This is a pilot, not a port. It reuses the existing Express backend — extended, not
-replaced, see "Auth" below — and re-implements only sign-in/register and the product
-listing and detail views. Cart, checkout, orders, AI features and admin are not built yet.
+replaced, see "Auth" below — and re-implements sign-in/register, product browsing and
+detail, cart, checkout, order history, and the customer profile. The AI features and the
+admin dashboard are not built yet.
 
 ## Auth
 
@@ -45,6 +46,11 @@ sends it as a Bearer header on every request that needs it.
 If products do not load, the phone almost always cannot reach the backend: confirm both
 devices are on the same Wi-Fi and that Windows Firewall allows inbound TCP on port 3000.
 
+If the profile screen or checkout fails with a 500 mentioning an unknown column
+(`phone`, `vault_products`, etc.), an existing local database predates a migration.
+Apply any pending file in `database/migrations/` — see the root `README.md`'s
+"Database compatibility" section for the exact command.
+
 Since SDK 57, **Expo Go on iOS requires signing in**, on both the computer (`npx expo
 login`) and the Expo Go app itself, with the same account — this is an Expo policy change,
 unrelated to this project. See the [Expo changelog](https://expo.dev/changelog/expo-go-57-login).
@@ -58,7 +64,19 @@ unrelated to this project. See the [Expo changelog](https://expo.dev/changelog/e
   two-column product grid, results count, and the partial-inventory notice.
 - Product card: image with fallback tile, business pill, category, name, THB price,
   stock quantity, and stock badge.
-- Product detail: opened by tapping a card, with image, price, availability, and details.
+- Product detail: image, price, availability, details, a quantity stepper, and Add to
+  cart — with the web's exact stock-clamping rules (`src/purchase.ts`).
+- Cart: grouped by business, quantity controls, remove, subtotal, and an unavailable-item
+  warning that blocks checkout — ported line-for-line from the web's cart logic
+  (`src/cart/cartState.ts`) so behavior matches exactly; only the storage layer differs
+  (`AsyncStorage` instead of `localStorage`).
+- Checkout: the web's exact shipping-form validation and copy (`src/checkout.ts`), an
+  order review with live totals, and a confirmation screen after a real order is placed.
+- Order history: a list of past orders and a detail view per order, both authenticated
+  with the Bearer token from Phase 1.
+- Customer profile: view and edit contact/address details, and upload or remove a profile
+  photo via the device's photo library (`expo-image-picker`), matching the web's
+  validation limits and field-by-field error copy (`src/profile.ts`).
 - Pull to refresh, loading state, error state with retry, and empty state.
 
 ## What matched the web, and what could not
@@ -80,15 +98,20 @@ These are the gaps, and they are the point of the pilot:
 
 ## Effort estimate for a full port
 
-This screen alone — two views out of roughly thirty components in the web app — required
+Every screen here — about a third of the web app's roughly thirty components — required
 rewriting every element and every style from scratch, because React Native shares no
-markup or CSS with the web. Porting the whole storefront would also require replacing:
+markup or CSS with the web. What's still missing to cover the rest of the web app:
 
-- the hash-based router (`window.location.hash`) with React Navigation,
-- `sessionStorage` cart and favourites with `AsyncStorage`,
-- and, most significantly, the httpOnly **cookie** session with token-based auth, which
-  means changing `backend/src/controllers/authController.ts` and
-  `backend/src/middleware/auth.ts` as well.
+- the AI features (search, chat, recommendations, descriptions) and the admin dashboard
+  are not built at all,
+- the hash-based router (`window.location.hash`) is not used here — every screen is
+  reached through modals and local state instead of React Navigation, which is what a
+  full app with more than a handful of screens would need,
+- favourites (the web's "save for later") are not built.
+
+Already done, for reference: auth now works with a Bearer token instead of the cookie
+(`backend/src/middleware/auth.ts` accepts either), and the cart uses `AsyncStorage` in
+place of `localStorage`.
 
 Treat a full mobile app as building a second frontend against the same backend, not as
 converting the existing one.
