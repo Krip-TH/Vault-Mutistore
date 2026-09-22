@@ -7,11 +7,13 @@ import { createAdminRouter } from './admin.js';
 import { createAiRouter } from './ai.js';
 import { createClaimRouter, createOrderClaimRoutes } from './claims.js';
 import { createProfileRouter } from './profile.js';
+import { getBestSellers } from '../controllers/bestSellerController.js';
 
 const router = Router();
 router.use(attachUser);
 router.get('/health', getHealth);
 router.get('/products', getProducts);
+router.get('/products/best-sellers', getBestSellers);
 router.get('/businesses', getBusinesses);
 router.get('/stock/summary', getStockSummary);
 router.post('/orders', requireAuth, postOrder);

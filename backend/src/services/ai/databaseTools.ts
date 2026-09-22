@@ -4,6 +4,7 @@ import { orderRepository } from '../../repositories/orderRepository.js';
 import type { NormalizedProduct } from '../../types/product.js';
 import { claimService } from '../claimService.js';
 import { profileService } from '../profileService.js';
+import { bestSellerService } from '../bestSellerService.js';
 import { getCachedProducts } from './productsCache.js';
 
 const DEFAULT_LIMIT = 10;
@@ -20,6 +21,7 @@ export interface DatabaseToolDependencies {
   getClaims(userId: number, query: unknown): ReturnType<typeof claimService.listClaims>;
   getClaim(userId: number, claimNumber: string): ReturnType<typeof claimService.getClaim>;
   getWarranty(userId: number, orderNo: string): ReturnType<typeof claimService.getWarrantyDocument>;
+  getBestSellers(query: unknown): ReturnType<typeof bestSellerService.list>;
 }
 
 const defaults: DatabaseToolDependencies = {
@@ -30,6 +32,7 @@ const defaults: DatabaseToolDependencies = {
   getClaims: (userId, query) => claimService.listClaims(userId, query),
   getClaim: (userId, claimNumber) => claimService.getClaim(userId, claimNumber),
   getWarranty: (userId, orderNo) => claimService.getWarrantyDocument(userId, orderNo),
+  getBestSellers: query => bestSellerService.list(query),
 };
 
 const schema = (properties: Json, required: string[] = []) => ({
@@ -50,6 +53,12 @@ export const databaseToolDeclarations: FunctionDeclaration[] = [
   {
     name: 'get_product_details', description: 'Get one current product by product id and business.',
     parametersJsonSchema: schema({ product_id: { type: 'string' }, business: { type: 'string', enum: businesses } }, ['product_id', 'business']),
+  },
+  {
+    name: 'get_best_sellers', description: 'Get products ranked by real completed-order unit sales, optionally for one business.',
+    parametersJsonSchema: schema({
+      business: { type: 'string', enum: businesses }, limit: { type: 'integer', minimum: 1, maximum: MAX_RESULTS },
+    }),
   },
   { name: 'get_my_profile', description: 'Get the signed-in customer safe profile and shipping contact fields.', parametersJsonSchema: schema({}) },
   {
@@ -142,6 +151,15 @@ export function createDatabaseToolExecutor(userId: number | null, overrides: Par
         if (!validBusinesses.has(business)) throw new ApiError(400, 'INVALID_TOOL_ARGUMENTS', 'Invalid business.');
         const product = (await dependencies.getProducts()).find(item => item.id === productId && item.business === business);
         return product ? { found: true, product: productView(product) } : { found: false };
+      }
+      case 'get_best_sellers': {
+        const limit = limitArg(args);
+        const business = typeof args.business === 'string' ? args.business.trim().toLowerCase() : '';
+        if (business && !validBusinesses.has(business)) throw new ApiError(400, 'INVALID_TOOL_ARGUMENTS', 'Invalid business.');
+        const sellers = await dependencies.getBestSellers({ limit, business: business || undefined });
+        return { returned: sellers.length, best_sellers: sellers.map(item => ({
+          rank: item.rank, units_sold: item.units_sold, product: productView(item.product),
+        })) };
       }
       case 'get_my_profile': return { profile: await dependencies.getProfile(requireUser(userId)) };
       case 'get_my_orders': {

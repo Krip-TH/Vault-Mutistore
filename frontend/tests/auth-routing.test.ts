@@ -142,7 +142,7 @@ test('hash routes support direct navigation without ambiguous admin paths', () =
 });
 
 test('customer and admin navigation remain role-separated', () => {
-  assert.deepEqual(customerNavigation.map(item => item.label), ['Home', 'Shop', 'Cart', 'My Orders', 'My Claims', 'Profile']);
+  assert.deepEqual(customerNavigation.map(item => item.label), ['Home', 'Shop', 'Best Sellers', 'Cart', 'My Orders', 'My Claims', 'Profile']);
   assert.equal(customerNavigation.some(item => item.label.toLowerCase().includes('admin')), false);
   assert.deepEqual(adminNavigation.map(item => item.label), ['Dashboard', 'Products', 'Orders', 'Claims', 'Users', 'Businesses']);
   assert.equal(isRouteActive('products', 'products'), true);
