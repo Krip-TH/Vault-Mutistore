@@ -6,8 +6,8 @@ mobile app: **how closely can React Native match the existing web UI, and what d
 
 This is a pilot, not a port. It reuses the existing Express backend — extended, not
 replaced, see "Auth" below — and re-implements sign-in/register, product browsing and
-detail, cart, checkout, order history, and the customer profile. The AI features and the
-admin dashboard are not built yet.
+detail, cart, checkout, order history, the customer profile, and the four AI features
+(search, chat, recommendations, descriptions). The admin dashboard is not built.
 
 ## Auth
 
@@ -77,6 +77,12 @@ unrelated to this project. See the [Expo changelog](https://expo.dev/changelog/e
 - Customer profile: view and edit contact/address details, and upload or remove a profile
   photo via the device's photo library (`expo-image-picker`), matching the web's
   validation limits and field-by-field error copy (`src/profile.ts`).
+- AI natural-language search above the product grid, a floating shopping-assistant chat
+  widget (answers order questions when signed in, since the Bearer token is attached
+  when present), AI-picked related products on the detail screen, and an AI-generated
+  description when a product has none. All four fail silently and hide themselves if
+  `/api/ai/*` is ever unavailable — same rule as the web, no backend changes needed since
+  the Phase 1 Bearer-token support already covers these routes.
 - Pull to refresh, loading state, error state with retry, and empty state.
 
 ## What matched the web, and what could not
@@ -102,16 +108,18 @@ Every screen here — about a third of the web app's roughly thirty components �
 rewriting every element and every style from scratch, because React Native shares no
 markup or CSS with the web. What's still missing to cover the rest of the web app:
 
-- the AI features (search, chat, recommendations, descriptions) and the admin dashboard
-  are not built at all,
+- the admin dashboard (metrics, product CRUD, order management, analytics) is not
+  built at all — it is also the highest-privilege surface, so it deserves the most
+  scrutiny before anyone starts,
 - the hash-based router (`window.location.hash`) is not used here — every screen is
   reached through modals and local state instead of React Navigation, which is what a
   full app with more than a handful of screens would need,
 - favourites (the web's "save for later") are not built.
 
-Already done, for reference: auth now works with a Bearer token instead of the cookie
-(`backend/src/middleware/auth.ts` accepts either), and the cart uses `AsyncStorage` in
-place of `localStorage`.
+Already done, for reference: auth works with a Bearer token instead of the cookie
+(`backend/src/middleware/auth.ts` accepts either), the cart uses `AsyncStorage` in place
+of `localStorage`, and all four AI features work unmodified on the backend side — the
+Phase 1 auth change was enough for `/api/ai/chat` to recognize a signed-in user too.
 
 Treat a full mobile app as building a second frontend against the same backend, not as
 converting the existing one.

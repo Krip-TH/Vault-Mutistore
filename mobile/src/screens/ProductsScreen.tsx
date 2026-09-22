@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { fetchProducts } from '../api';
 import { useAuth } from '../auth/AuthContext';
 import { useCart } from '../cart/CartContext';
+import AiSearchBar from '../components/AiSearchBar';
 import CartModal from '../components/CartModal';
 import CheckoutModal from '../components/CheckoutModal';
 import OrdersModal from '../components/OrdersModal';
@@ -113,6 +114,8 @@ export default function ProductsScreen() {
         })}
       </ScrollView>
 
+      <AiSearchBar onSelectProduct={setSelected} />
+
       <Text style={styles.resultsLine}>
         {loading
           ? 'Gathering the collection…'
@@ -204,6 +207,7 @@ export default function ProductsScreen() {
         product={selected}
         onClose={() => setSelected(null)}
         onOpenCart={() => { setSelected(null); setCartOpen(true); }}
+        onSelectProduct={setSelected}
       />
       <CartModal
         visible={cartOpen}

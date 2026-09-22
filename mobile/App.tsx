@@ -3,6 +3,7 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './src/auth/AuthContext';
 import { CartProvider } from './src/cart/CartContext';
+import AiChatWidget from './src/components/AiChatWidget';
 import AuthScreen from './src/screens/AuthScreen';
 import ProductsScreen from './src/screens/ProductsScreen';
 import { colors } from './src/theme';
@@ -18,7 +19,14 @@ function Root() {
     );
   }
 
-  return user ? <ProductsScreen /> : <AuthScreen />;
+  if (!user) return <AuthScreen />;
+
+  return (
+    <>
+      <ProductsScreen />
+      <AiChatWidget />
+    </>
+  );
 }
 
 export default function App() {

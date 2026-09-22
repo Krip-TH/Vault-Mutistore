@@ -6,6 +6,8 @@ import { formatCount, formatTHB } from '../format';
 import { useCart } from '../cart/CartContext';
 import { purchaseState } from '../purchase';
 import type { Product } from '../types';
+import AiDescription from './AiDescription';
+import AiRelatedProducts from './AiRelatedProducts';
 import ProductImage from './ProductImage';
 import StockBadge from './StockBadge';
 
@@ -13,6 +15,7 @@ interface Props {
   product: Product | null;
   onClose: () => void;
   onOpenCart: () => void;
+  onSelectProduct: (product: Product) => void;
 }
 
 /**
@@ -20,7 +23,7 @@ interface Props {
  * React Native has no dialog element, so this is the closest equivalent: a
  * <Modal> with the platform's own slide transition.
  */
-export default function ProductDetailModal({ product, onClose, onOpenCart }: Props) {
+export default function ProductDetailModal({ product, onClose, onOpenCart, onSelectProduct }: Props) {
   const insets = useSafeAreaInsets();
   const cart = useCart();
   const [quantity, setQuantity] = useState(1);
@@ -97,6 +100,8 @@ export default function ProductDetailModal({ product, onClose, onOpenCart }: Pro
             )}
           </View>
 
+          <AiDescription product={product} />
+
           <View style={styles.purchasePanel}>
             <View style={styles.quantityRow}>
               <Text style={styles.quantityLabel}>Quantity</Text>
@@ -162,6 +167,8 @@ export default function ProductDetailModal({ product, onClose, onOpenCart }: Pro
             )}
             <Text style={styles.reference}>Product reference · {product.id}</Text>
           </View>
+
+          <AiRelatedProducts product={product} onSelectProduct={onSelectProduct} />
         </ScrollView>
       </View>
     </Modal>
