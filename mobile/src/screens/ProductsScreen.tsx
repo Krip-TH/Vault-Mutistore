@@ -12,6 +12,9 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { fetchProducts } from '../api';
 import { useAuth } from '../auth/AuthContext';
+import { useCart } from '../cart/CartContext';
+import CartModal from '../components/CartModal';
+import CheckoutModal from '../components/CheckoutModal';
 import ProductCard from '../components/ProductCard';
 import ProductDetailModal from '../components/ProductDetailModal';
 import { colors, serif } from '../theme';
@@ -32,6 +35,7 @@ const productKey = (product: Product) => `${product.business}:${product.id}`;
 export default function ProductsScreen() {
   const insets = useSafeAreaInsets();
   const { user, logout } = useAuth();
+  const cart = useCart();
   const [products, setProducts] = useState<Product[]>([]);
   const [availability, setAvailability] = useState<BusinessAvailability[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,6 +43,8 @@ export default function ProductsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [business, setBusiness] = useState<BusinessType | 'all'>('all');
   const [selected, setSelected] = useState<Product | null>(null);
+  const [cartOpen, setCartOpen] = useState(false);
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
 
   const load = useCallback(async () => {
     setError(null);
@@ -56,6 +62,13 @@ export default function ProductsScreen() {
   useEffect(() => {
     void load().finally(() => setLoading(false));
   }, [load]);
+
+  // Keeps cart snapshots (price/stock/status) current with the latest fetch, exactly
+  // like the web app's `cart.syncProducts(products)` effect.
+  useEffect(() => {
+    if (!loading && !error) cart.syncProducts(products);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cart.syncProducts, error, loading, products]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -135,6 +148,13 @@ export default function ProductsScreen() {
         </View>
         <View style={styles.accountGroup}>
           {!!user && <Text style={styles.accountName} numberOfLines={1}>{user.name}</Text>}
+          <Pressable
+            onPress={() => setCartOpen(true)}
+            hitSlop={8}
+            accessibilityLabel={`Open cart with ${cart.itemCount} items`}
+          >
+            <Text style={styles.cartText}>Cart · {cart.itemCount}</Text>
+          </Pressable>
           <Pressable onPress={() => void logout()} hitSlop={8}>
             <Text style={styles.logoutText}>Log out</Text>
           </Pressable>
@@ -172,7 +192,22 @@ export default function ProductsScreen() {
         }
       />
 
-      <ProductDetailModal product={selected} onClose={() => setSelected(null)} />
+      <ProductDetailModal
+        product={selected}
+        onClose={() => setSelected(null)}
+        onOpenCart={() => { setSelected(null); setCartOpen(true); }}
+      />
+      <CartModal
+        visible={cartOpen}
+        onClose={() => setCartOpen(false)}
+        onExplore={() => setCartOpen(false)}
+        onCheckout={() => setCheckoutOpen(true)}
+      />
+      <CheckoutModal
+        visible={checkoutOpen}
+        onClose={() => setCheckoutOpen(false)}
+        onContinueShopping={() => setCheckoutOpen(false)}
+      />
     </View>
   );
 }
@@ -194,6 +229,7 @@ const styles = StyleSheet.create({
   brandGroup: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   accountGroup: { flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 1 },
   accountName: { fontSize: 11, color: colors.muted, maxWidth: 90 },
+  cartText: { fontSize: 11, color: colors.text, fontWeight: '600' },
   logoutText: { fontSize: 11, color: colors.darkGreen, fontWeight: '600', textDecorationLine: 'underline' },
   brandMark: {
     width: 38,

@@ -2,6 +2,7 @@ import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './src/auth/AuthContext';
+import { CartProvider } from './src/cart/CartContext';
 import AuthScreen from './src/screens/AuthScreen';
 import ProductsScreen from './src/screens/ProductsScreen';
 import { colors } from './src/theme';
@@ -25,7 +26,9 @@ export default function App() {
     <SafeAreaProvider>
       <StatusBar style="dark" />
       <AuthProvider>
-        <Root />
+        <CartProvider>
+          <Root />
+        </CartProvider>
       </AuthProvider>
     </SafeAreaProvider>
   );

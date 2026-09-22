@@ -3,7 +3,9 @@ import { Image, StyleSheet, Text, View } from 'react-native';
 import { colors, serif } from '../theme';
 import type { Product } from '../types';
 
-export default function ProductImage({ product }: { product: Product }) {
+type ImageableProduct = Pick<Product, 'image_url' | 'name' | 'business_name' | 'category'>;
+
+export default function ProductImage({ product }: { product: ImageableProduct }) {
   const [failed, setFailed] = useState(false);
 
   if (!product.image_url || failed) {
