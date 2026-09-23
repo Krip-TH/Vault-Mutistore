@@ -6,8 +6,9 @@ mobile app: **how closely can React Native match the existing web UI, and what d
 
 This is a pilot, not a port. It reuses the existing Express backend — extended, not
 replaced, see "Auth" below — and re-implements sign-in/register, product browsing and
-detail, cart, checkout, order history, the customer profile, and the four AI features
-(search, chat, recommendations, descriptions). The admin dashboard is not built.
+detail, cart, checkout, order history, the customer profile, the four AI features
+(search, chat, recommendations, descriptions), and the admin dashboard (analytics,
+orders, product CRUD, user and business management).
 
 ## Auth
 
@@ -84,6 +85,13 @@ unrelated to this project. See the [Expo changelog](https://expo.dev/changelog/e
   `/api/ai/*` is ever unavailable — same rule as the web, no backend changes needed since
   the Phase 1 Bearer-token support already covers these routes.
 - Pull to refresh, loading state, error state with retry, and empty state.
+- Admin dashboard, gated behind an "Admin" link shown only to signed-in admins
+  (`user.role === 'admin'`): a KPI dashboard with revenue, order, customer and inventory
+  charts (`react-native-chart-kit`) and the K-means product-segmentation summary; order
+  management with status updates; product CRUD, including image upload from the device's
+  photo library or an external URL, and read-only handling for externally managed
+  products; and user and business management, matching the web dashboard's rules (e.g. an
+  admin cannot delete their own account).
 
 ## What matched the web, and what could not
 
@@ -101,6 +109,7 @@ These are the gaps, and they are the point of the pilot:
 | `<dialog>` + `showModal()` + CSS keyframes | `<Modal>` with platform transitions | The detail view slides in with the OS animation rather than the web's custom one |
 | `backdrop-filter: blur()` | Limited support | Not used in this pilot |
 | `Intl.NumberFormat` | Varies by device JS engine | Prices are formatted manually to guarantee identical output |
+| Web dashboard's price-vs-stock scatter plot (K-means) | `react-native-chart-kit` has no scatter chart | Replaced with the same cluster data as summary cards instead of a scatter plot |
 
 ## Effort estimate for a full port
 
@@ -108,9 +117,6 @@ Every screen here — about a third of the web app's roughly thirty components �
 rewriting every element and every style from scratch, because React Native shares no
 markup or CSS with the web. What's still missing to cover the rest of the web app:
 
-- the admin dashboard (metrics, product CRUD, order management, analytics) is not
-  built at all — it is also the highest-privilege surface, so it deserves the most
-  scrutiny before anyone starts,
 - the hash-based router (`window.location.hash`) is not used here — every screen is
   reached through modals and local state instead of React Navigation, which is what a
   full app with more than a handful of screens would need,
@@ -118,8 +124,11 @@ markup or CSS with the web. What's still missing to cover the rest of the web ap
 
 Already done, for reference: auth works with a Bearer token instead of the cookie
 (`backend/src/middleware/auth.ts` accepts either), the cart uses `AsyncStorage` in place
-of `localStorage`, and all four AI features work unmodified on the backend side — the
-Phase 1 auth change was enough for `/api/ai/chat` to recognize a signed-in user too.
+of `localStorage`, all four AI features work unmodified on the backend side — the
+Phase 1 auth change was enough for `/api/ai/chat` to recognize a signed-in user too —
+and the admin dashboard (Phase 5) reuses the same `/api/admin` routes as the web
+dashboard, gated by the same `requireAdmin` middleware and a Bearer token instead of
+the session cookie.
 
 Treat a full mobile app as building a second frontend against the same backend, not as
 converting the existing one.

@@ -14,6 +14,7 @@ import { fetchProducts } from '../api';
 import { useAuth } from '../auth/AuthContext';
 import { useCart } from '../cart/CartContext';
 import AiSearchBar from '../components/AiSearchBar';
+import AdminScreen from '../components/admin/AdminScreen';
 import CartModal from '../components/CartModal';
 import CheckoutModal from '../components/CheckoutModal';
 import OrdersModal from '../components/OrdersModal';
@@ -50,6 +51,7 @@ export default function ProductsScreen() {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [ordersOpen, setOrdersOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [adminOpen, setAdminOpen] = useState(false);
 
   const load = useCallback(async () => {
     setError(null);
@@ -154,6 +156,11 @@ export default function ProductsScreen() {
           <Text style={styles.brandName}>VAULT</Text>
         </View>
         <View style={styles.accountGroup}>
+          {user?.role === 'admin' && (
+            <Pressable onPress={() => setAdminOpen(true)} hitSlop={8}>
+              <Text style={styles.adminLinkText}>Admin</Text>
+            </Pressable>
+          )}
           <Pressable onPress={() => setOrdersOpen(true)} hitSlop={8}>
             <Text style={styles.linkText}>Orders</Text>
           </Pressable>
@@ -222,6 +229,7 @@ export default function ProductsScreen() {
       />
       <OrdersModal visible={ordersOpen} onClose={() => setOrdersOpen(false)} />
       <ProfileModal visible={profileOpen} onClose={() => setProfileOpen(false)} />
+      {user?.role === 'admin' && <AdminScreen visible={adminOpen} onClose={() => setAdminOpen(false)} />}
     </View>
   );
 }
@@ -243,6 +251,7 @@ const styles = StyleSheet.create({
   brandGroup: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   accountGroup: { flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 1 },
   linkText: { fontSize: 11, color: colors.text, fontWeight: '600' },
+  adminLinkText: { fontSize: 11, color: '#8f6846', fontWeight: '700' },
   cartText: { fontSize: 11, color: colors.text, fontWeight: '600' },
   profileDot: { width: 26, height: 26, borderRadius: 13, backgroundColor: colors.darkGreen, alignItems: 'center', justifyContent: 'center' },
   profileDotText: { fontSize: 11, color: '#fff', fontWeight: '600' },
