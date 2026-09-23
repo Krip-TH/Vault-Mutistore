@@ -16,10 +16,11 @@ interface Props {
   visible: boolean;
   orderNo: string | null;
   onClose: () => void;
+  onDismiss?: () => void;
   onSubmitted: (claim: Claim) => void;
 }
 
-export default function ClaimFormModal({ visible, orderNo, onClose, onSubmitted }: Props) {
+export default function ClaimFormModal({ visible, orderNo, onClose, onDismiss, onSubmitted }: Props) {
   const [source, setSource] = useState<ClaimableItemsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -148,7 +149,7 @@ export default function ClaimFormModal({ visible, orderNo, onClose, onSubmitted 
   }
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose} onDismiss={onDismiss}>
       <View style={styles.sheet}>
         <View style={styles.topBar}>
           <Text style={styles.eyebrow}>SUBMIT A CLAIM</Text>
@@ -211,36 +212,37 @@ export default function ClaimFormModal({ visible, orderNo, onClose, onSubmitted 
             {items.map(item => {
               const selected = selection[item.order_item_id] ?? 0;
               return (
-                <Pressable
+                <View
                   key={item.order_item_id}
                   style={[styles.itemRow, selected > 0 && styles.itemRowSelected]}
-                  onPress={() => toggle(item)}
                 >
-                  <View style={styles.itemThumb}>
-                    <ProductImage product={{ image_url: item.image_url, name: item.product_name, business_name: item.business_name, category: item.category }} />
-                  </View>
-                  <View style={styles.itemInfo}>
-                    <Text style={styles.orderRowSmall}>{item.business_name}</Text>
-                    <Text style={styles.orderRowStrong}>{item.product_name}</Text>
-                    <Text style={styles.orderRowSmall}>
-                      {formatTHB(item.unit_price)} · {item.claimable_quantity} of {item.purchased_quantity} still claimable
-                    </Text>
-                    {selected > 0 && (
-                      <View style={styles.quantityControl}>
-                        <Pressable onPress={() => setQuantity(item, selected - 1)} disabled={selected <= 1} hitSlop={8}>
-                          <Text style={styles.quantityButtonText}>−</Text>
-                        </Pressable>
-                        <Text style={styles.quantityValue}>{selected}</Text>
-                        <Pressable onPress={() => setQuantity(item, selected + 1)} disabled={selected >= item.claimable_quantity} hitSlop={8}>
-                          <Text style={styles.quantityButtonText}>+</Text>
-                        </Pressable>
-                      </View>
-                    )}
-                  </View>
-                  <View style={[styles.checkbox, selected > 0 && styles.checkboxChecked]}>
-                    {selected > 0 && <Text style={styles.checkboxMark}>✓</Text>}
-                  </View>
-                </Pressable>
+                  <Pressable style={styles.itemSelectArea} onPress={() => toggle(item)}>
+                    <View style={styles.itemThumb}>
+                      <ProductImage product={{ image_url: item.image_url, name: item.product_name, business_name: item.business_name, category: item.category }} />
+                    </View>
+                    <View style={styles.itemInfo}>
+                      <Text style={styles.orderRowSmall}>{item.business_name}</Text>
+                      <Text style={styles.orderRowStrong}>{item.product_name}</Text>
+                      <Text style={styles.orderRowSmall}>
+                        {formatTHB(item.unit_price)} · {item.claimable_quantity} of {item.purchased_quantity} still claimable
+                      </Text>
+                    </View>
+                    <View style={[styles.checkbox, selected > 0 && styles.checkboxChecked]}>
+                      {selected > 0 && <Text style={styles.checkboxMark}>✓</Text>}
+                    </View>
+                  </Pressable>
+                  {selected > 0 && (
+                    <View style={styles.quantityControl}>
+                      <Pressable onPress={() => setQuantity(item, selected - 1)} disabled={selected <= 1} hitSlop={8}>
+                        <Text style={styles.quantityButtonText}>−</Text>
+                      </Pressable>
+                      <Text style={styles.quantityValue}>{selected}</Text>
+                      <Pressable onPress={() => setQuantity(item, selected + 1)} disabled={selected >= item.claimable_quantity} hitSlop={8}>
+                        <Text style={styles.quantityButtonText}>+</Text>
+                      </Pressable>
+                    </View>
+                  )}
+                </View>
               );
             })}
 
@@ -329,15 +331,15 @@ const styles = StyleSheet.create({
   sectionTitle: { fontFamily: serif, fontSize: 16, color: colors.text, marginTop: 20, marginBottom: 10 },
   errorText: { fontSize: 11, color: '#8c3f38', marginBottom: 8 },
   itemRow: {
-    flexDirection: 'row', gap: 12, alignItems: 'center', backgroundColor: '#fff', borderWidth: 1,
-    borderColor: colors.cardBorder, borderRadius: 12, padding: 12, marginBottom: 10,
+    backgroundColor: '#fff', borderWidth: 1, borderColor: colors.cardBorder, borderRadius: 12, padding: 12, marginBottom: 10,
   },
   itemRowSelected: { borderColor: colors.darkGreen },
+  itemSelectArea: { flexDirection: 'row', gap: 12, alignItems: 'center' },
   itemThumb: { width: 52, height: 52, borderRadius: 10, overflow: 'hidden', backgroundColor: colors.imageBackground },
   itemInfo: { flex: 1, gap: 2 },
   orderRowSmall: { fontSize: 10, color: colors.muted },
   orderRowStrong: { fontSize: 13, color: colors.text, fontWeight: '500' },
-  quantityControl: { flexDirection: 'row', alignItems: 'center', gap: 14, borderWidth: 1, borderColor: colors.cardBorder, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 4, marginTop: 8, alignSelf: 'flex-start' },
+  quantityControl: { flexDirection: 'row', alignItems: 'center', gap: 14, borderWidth: 1, borderColor: colors.cardBorder, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 4, marginTop: 10, marginLeft: 64, alignSelf: 'flex-start' },
   quantityButtonText: { fontSize: 16, color: colors.text, width: 16, textAlign: 'center' },
   quantityValue: { fontSize: 13, color: colors.text, minWidth: 16, textAlign: 'center' },
   checkbox: { width: 22, height: 22, borderRadius: 11, borderWidth: 1, borderColor: colors.cardBorder, alignItems: 'center', justifyContent: 'center' },

@@ -19,10 +19,11 @@ export default function AiDescription({ product }: Props) {
   useEffect(() => {
     let active = true;
     setDescription(null);
+    setAvailable(true);
     fetchAiDescription(product.id, product.business)
       .then(response => { if (active) setDescription(response.description); })
-      .catch(() => {
-        // AI features must never break the app: fail silently and hide this section.
+      .catch(error => {
+        console.warn('[VAULT AI] Product description is unavailable.', error);
         if (active) setAvailable(false);
       });
     return () => { active = false; };

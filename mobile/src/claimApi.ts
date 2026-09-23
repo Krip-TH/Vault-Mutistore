@@ -1,6 +1,7 @@
 import type { ImagePickerAsset } from 'expo-image-picker';
 import { authorizedHeaders, errorMessage } from './api';
-import { API_BASE_URL, REQUEST_TIMEOUT_MS } from './config';
+import { API_BASE_URL } from './config';
+import { apiFetch } from './http';
 import type {
   Claim, ClaimableItemsResponse, ClaimListPage, ClaimReason, ClaimStatus,
 } from './types';
@@ -14,35 +15,31 @@ async function readData<T>(response: Response, fallback: string): Promise<T> {
 
 export async function fetchClaims(status: ClaimStatus | 'all' = 'all'): Promise<ClaimListPage> {
   const search = status !== 'all' ? `?status=${encodeURIComponent(status)}` : '';
-  const response = await fetch(`${API_BASE_URL}/api/claims${search}`, {
+  const response = await apiFetch(`${API_BASE_URL}/api/claims${search}`, {
     headers: await authorizedHeaders(),
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   return readData<ClaimListPage>(response, 'Unable to load your claims.');
 }
 
 export async function fetchClaim(claimNumber: string): Promise<Claim> {
-  const response = await fetch(`${API_BASE_URL}/api/claims/${encodeURIComponent(claimNumber)}`, {
+  const response = await apiFetch(`${API_BASE_URL}/api/claims/${encodeURIComponent(claimNumber)}`, {
     headers: await authorizedHeaders(),
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   return readData<Claim>(response, 'Unable to load this claim.');
 }
 
 export async function cancelClaim(claimNumber: string): Promise<Claim> {
-  const response = await fetch(`${API_BASE_URL}/api/claims/${encodeURIComponent(claimNumber)}/cancel`, {
+  const response = await apiFetch(`${API_BASE_URL}/api/claims/${encodeURIComponent(claimNumber)}/cancel`, {
     method: 'POST',
     headers: await authorizedHeaders({ 'Content-Type': 'application/json' }),
     body: '{}',
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   return readData<Claim>(response, 'Unable to cancel this claim.');
 }
 
 export async function fetchClaimableItems(orderNo: string): Promise<ClaimableItemsResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/orders/${encodeURIComponent(orderNo)}/claimable-items`, {
+  const response = await apiFetch(`${API_BASE_URL}/api/orders/${encodeURIComponent(orderNo)}/claimable-items`, {
     headers: await authorizedHeaders(),
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   return readData<ClaimableItemsResponse>(response, 'Unable to load the products you can claim.');
 }
@@ -72,11 +69,10 @@ export async function submitClaim(input: SubmitClaimInput): Promise<Claim> {
     } as unknown as Blob);
   });
 
-  const response = await fetch(`${API_BASE_URL}/api/claims`, {
+  const response = await apiFetch(`${API_BASE_URL}/api/claims`, {
     method: 'POST',
     headers: await authorizedHeaders(),
     body,
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   return readData<Claim>(response, 'Unable to submit the claim. Please try again.');
 }

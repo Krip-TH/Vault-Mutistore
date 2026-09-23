@@ -25,22 +25,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let active = true;
     (async () => {
-      // A saved token survives app restarts; expo-secure-store is the encrypted
-      // equivalent of the httpOnly cookie the web app relies on.
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
-      if (!token) {
+      try {
+        // A saved token survives app restarts; expo-secure-store is the encrypted
+        // equivalent of the httpOnly cookie the web app relies on.
+        const token = await SecureStore.getItemAsync(TOKEN_KEY);
+        if (!token) return;
+        const current = await fetchCurrentUser(token);
+        if (!active) return;
+        if (current) {
+          setUser(current);
+        } else {
+          // Only an actually rejected token removes the session. A connectivity
+          // failure is handled below so it cannot destroy valid credentials.
+          await SecureStore.deleteItemAsync(TOKEN_KEY);
+        }
+      } catch (error) {
+        console.error('[VAULT auth] Session restoration failed; the saved token was kept.', error);
+      } finally {
         if (active) setLoading(false);
-        return;
       }
-      const current = await fetchCurrentUser(token);
-      if (!active) return;
-      if (current) {
-        setUser(current);
-      } else {
-        // The token expired or the account no longer exists.
-        await SecureStore.deleteItemAsync(TOKEN_KEY);
-      }
-      setLoading(false);
     })();
     return () => { active = false; };
   }, []);

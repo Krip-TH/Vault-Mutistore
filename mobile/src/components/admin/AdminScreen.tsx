@@ -28,18 +28,19 @@ const tabs: Array<{ value: AdminView; label: string }> = [
 
 export default function AdminScreen({ visible, onClose }: Props) {
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [view, setView] = useState<AdminView>('dashboard');
   const [dashboard, setDashboard] = useState<AdminAnalytics | null>(null);
   const [orders, setOrders] = useState<AdminOrderSummary[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<AdminOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
-    setSelectedOrder(null);
     try {
       if (view === 'dashboard') setDashboard(await fetchAdminAnalytics());
       else if (view === 'orders') setOrders(await fetchAdminOrders());
@@ -59,10 +60,25 @@ export default function AdminScreen({ visible, onClose }: Props) {
     setError('');
     try {
       setSelectedOrder(await fetchAdminOrder(orderNo));
+      setView('orders');
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'Unable to load this order.');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function signOut() {
+    setLoggingOut(true);
+    setLogoutError('');
+    try {
+      await logout();
+      onClose();
+    } catch (requestError) {
+      console.error('[VAULT admin] Sign out failed.', requestError);
+      setLogoutError('Unable to sign out. Please try again.');
+    } finally {
+      setLoggingOut(false);
     }
   }
 
@@ -87,7 +103,7 @@ export default function AdminScreen({ visible, onClose }: Props) {
           {tabs.map(tab => (
             <Pressable
               key={tab.value}
-              onPress={() => setView(tab.value)}
+              onPress={() => { setSelectedOrder(null); setView(tab.value); }}
               style={[styles.tab, view === tab.value && styles.tabActive]}
             >
               <Text style={[styles.tabText, view === tab.value && styles.tabTextActive]}>{tab.label}</Text>
@@ -130,6 +146,15 @@ export default function AdminScreen({ visible, onClose }: Props) {
         {!!user && (
           <View style={[styles.footer, { paddingBottom: insets.bottom + 10 }]}>
             <Text style={styles.footerText}>{user.name} · Administrator</Text>
+            <View style={styles.footerActions}>
+              <Pressable onPress={onClose} style={styles.footerButton} disabled={loggingOut}>
+                <Text style={styles.footerButtonText}>Return to store</Text>
+              </Pressable>
+              <Pressable onPress={() => void signOut()} style={styles.footerButton} disabled={loggingOut}>
+                {loggingOut ? <ActivityIndicator color={colors.text} /> : <Text style={styles.footerButtonText}>Log out</Text>}
+              </Pressable>
+            </View>
+            {!!logoutError && <Text style={styles.logoutError}>{logoutError}</Text>}
           </View>
         )}
       </View>
@@ -155,6 +180,10 @@ const styles = StyleSheet.create({
   errorBody: { fontSize: 12, color: colors.muted, textAlign: 'center' },
   retryButton: { backgroundColor: colors.darkGreen, borderRadius: 24, paddingHorizontal: 20, paddingVertical: 10, marginTop: 4 },
   retryButtonText: { color: '#fff', fontSize: 12, fontWeight: '600' },
-  footer: { borderTopWidth: 1, borderTopColor: colors.headerBorder, paddingHorizontal: 20, paddingTop: 10 },
+  footer: { borderTopWidth: 1, borderTopColor: colors.headerBorder, paddingHorizontal: 20, paddingTop: 10, gap: 8 },
   footerText: { fontSize: 11, color: colors.muted },
+  footerActions: { flexDirection: 'row', gap: 10 },
+  footerButton: { borderWidth: 1, borderColor: colors.cardBorder, borderRadius: 18, paddingHorizontal: 14, paddingVertical: 8, minWidth: 92, alignItems: 'center' },
+  footerButtonText: { fontSize: 11, color: colors.text, fontWeight: '500' },
+  logoutError: { fontSize: 11, color: '#8c3f38' },
 });

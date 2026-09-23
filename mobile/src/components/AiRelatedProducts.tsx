@@ -17,10 +17,11 @@ export default function AiRelatedProducts({ product, onSelectProduct }: Props) {
   useEffect(() => {
     let active = true;
     setItems(null);
+    setAvailable(true);
     fetchRecommendations(product.id, product.business)
       .then(response => { if (active) setItems(response.data); })
-      .catch(() => {
-        // AI features must never break the app: fail silently and hide the section.
+      .catch(error => {
+        console.warn('[VAULT AI] Related products are unavailable.', error);
         if (active) setAvailable(false);
       });
     return () => { active = false; };
