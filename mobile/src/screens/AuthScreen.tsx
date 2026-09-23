@@ -18,7 +18,8 @@ const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function AuthScreen() {
   const insets = useSafeAreaInsets();
-  const { login, register } = useAuth();
+  const { login, loginAdmin, register } = useAuth();
+  const [isAdmin, setIsAdmin] = useState(false);
   const [isRegister, setIsRegister] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -28,6 +29,13 @@ export default function AuthScreen() {
 
   function switchMode(next: boolean) {
     setIsRegister(next);
+    setError('');
+    setPassword('');
+  }
+
+  function switchAdmin(next: boolean) {
+    setIsAdmin(next);
+    setIsRegister(false);
     setError('');
     setPassword('');
   }
@@ -42,6 +50,8 @@ export default function AuthScreen() {
     try {
       if (isRegister) {
         await register({ name: name.trim(), email: email.trim(), password });
+      } else if (isAdmin) {
+        await loginAdmin({ email: email.trim(), password });
       } else {
         await login({ email: email.trim(), password });
       }
@@ -64,12 +74,16 @@ export default function AuthScreen() {
         ]}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.eyebrow}>VAULT</Text>
-        <Text style={styles.title}>{isRegister ? 'Create your account.' : 'Welcome back.'}</Text>
+        <Text style={styles.eyebrow}>{isAdmin ? 'VAULT ADMIN · RESTRICTED OPERATIONS' : 'VAULT'}</Text>
+        <Text style={styles.title}>
+          {isAdmin ? 'Administrator access.' : isRegister ? 'Create your account.' : 'Welcome back.'}
+        </Text>
         <Text style={styles.subtitle}>
-          {isRegister
-            ? 'Join VAULT to place orders and follow your purchase history.'
-            : 'Sign in to continue.'}
+          {isAdmin
+            ? 'Sign in with an authorized administrator account.'
+            : isRegister
+              ? 'Join VAULT to place orders and follow your purchase history.'
+              : 'Sign in to continue.'}
         </Text>
 
         {isRegister && (
@@ -126,16 +140,32 @@ export default function AuthScreen() {
           {submitting ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.submitText}>{isRegister ? 'Create account' : 'Sign in'}</Text>
+            <Text style={styles.submitText}>
+              {isRegister ? 'Create account' : isAdmin ? 'Sign in to Admin' : 'Sign in'}
+            </Text>
           )}
         </Pressable>
 
-        <View style={styles.switchRow}>
-          <Text style={styles.switchText}>{isRegister ? 'Already have an account?' : 'New to VAULT?'}</Text>
-          <Pressable onPress={() => switchMode(!isRegister)} disabled={submitting}>
-            <Text style={styles.switchLink}>{isRegister ? 'Sign in' : 'Create an account'}</Text>
+        {isAdmin ? (
+          <View style={styles.switchRow}>
+            <Pressable onPress={() => switchAdmin(false)} disabled={submitting}>
+              <Text style={styles.switchLink}>← Customer sign in</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <View style={styles.switchRow}>
+            <Text style={styles.switchText}>{isRegister ? 'Already have an account?' : 'New to VAULT?'}</Text>
+            <Pressable onPress={() => switchMode(!isRegister)} disabled={submitting}>
+              <Text style={styles.switchLink}>{isRegister ? 'Sign in' : 'Create an account'}</Text>
+            </Pressable>
+          </View>
+        )}
+
+        {!isRegister && !isAdmin && (
+          <Pressable style={styles.adminEntry} onPress={() => switchAdmin(true)} disabled={submitting}>
+            <Text style={styles.adminEntryText}>Administrator? <Text style={styles.switchLink}>Admin sign in →</Text></Text>
           </Pressable>
-        </View>
+        )}
 
         {isRegister && (
           <Text style={styles.roleNote}>
@@ -180,4 +210,6 @@ const styles = StyleSheet.create({
   switchText: { fontSize: 12, color: colors.muted },
   switchLink: { fontSize: 12, color: colors.darkGreen, fontWeight: '600', textDecorationLine: 'underline' },
   roleNote: { fontSize: 11, color: colors.muted, textAlign: 'center', marginTop: 20, lineHeight: 16 },
+  adminEntry: { marginTop: 16, alignItems: 'center' },
+  adminEntryText: { fontSize: 12, color: colors.muted },
 });

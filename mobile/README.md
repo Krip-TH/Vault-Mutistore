@@ -69,7 +69,11 @@ unrelated to this project. See the [Expo changelog](https://expo.dev/changelog/e
 
 - Sign in and create an account, matching the web's validation (name required to
   register, a valid email, an 8+ character password) and error copy. The session
-  persists across app restarts.
+  persists across app restarts. Sign-in also has a distinct Admin entry point ("Administrator?
+  Admin sign in →"), ported from the web's `AuthPage.tsx`: the same `/api/auth/login`
+  request, but `AuthContext.loginAdmin` only keeps the session if the account's role is
+  `admin`, otherwise it fails with "This account does not have administrator access."
+  and nothing is persisted.
 - A hamburger navigation drawer (`src/components/NavigationDrawer.tsx`), ported from the
   web's `NavigationDrawer.tsx`: a "☰" button next to the brand mark opens a sheet listing
   Best Sellers, My Orders, My Claims, Profile, and Admin (only for `user.role === 'admin'`),

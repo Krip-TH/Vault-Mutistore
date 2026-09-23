@@ -11,6 +11,7 @@ interface AuthContextValue {
   user: User | null;
   loading: boolean;
   login: (form: LoginForm) => Promise<User>;
+  loginAdmin: (form: LoginForm) => Promise<User>;
   register: (form: RegisterForm) => Promise<User>;
   logout: () => Promise<void>;
 }
@@ -51,6 +52,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return current;
   }, []);
 
+  // Ported from the web's loginAdminAccount: the same credentials check, but the
+  // session is only kept — never persisted — when the account actually has admin access.
+  const loginAdmin = useCallback(async (form: LoginForm) => {
+    const { user: current, token } = await loginAccount(form);
+    if (current.role !== 'admin') throw new Error('This account does not have administrator access.');
+    await SecureStore.setItemAsync(TOKEN_KEY, token);
+    setUser(current);
+    return current;
+  }, []);
+
   const register = useCallback(async (form: RegisterForm) => {
     const { user: current, token } = await registerAccount(form);
     await SecureStore.setItemAsync(TOKEN_KEY, token);
@@ -64,8 +75,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ user, loading, login, register, logout }),
-    [loading, login, logout, register, user],
+    () => ({ user, loading, login, loginAdmin, register, logout }),
+    [loading, login, loginAdmin, logout, register, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
