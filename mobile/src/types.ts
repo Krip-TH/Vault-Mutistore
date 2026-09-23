@@ -287,3 +287,94 @@ export interface AdminAnalytics {
   recent_orders: AdminOrderSummary[];
   business_availability: Array<{ business: string; business_name: string; status: 'online' | 'unavailable'; product_count: number }>;
 }
+
+// --- Claims ---
+
+export type ClaimStatus =
+  | 'submitted' | 'under_review' | 'approved' | 'rejected' | 'processing' | 'completed' | 'cancelled';
+
+export type ClaimReason = 'damaged' | 'defective' | 'wrong_item' | 'missing_parts' | 'other';
+
+export interface ClaimEvidence {
+  id: number;
+  image_url: string;
+  mime_type: string;
+  file_size: number;
+  created_at: string;
+}
+
+export interface ClaimItem {
+  order_item_id: number;
+  quantity: number;
+  product_id: string;
+  product_name: string;
+  business: BusinessType;
+  business_name: string;
+  unit_price: number;
+  line_total: number;
+}
+
+export interface ClaimHistoryEntry {
+  previous_status: ClaimStatus | null;
+  new_status: ClaimStatus;
+  changed_by_role: 'customer' | 'admin';
+  note: string | null;
+  created_at: string;
+}
+
+export interface Claim {
+  claim_number: string;
+  order_no: string;
+  status: ClaimStatus;
+  reason: ClaimReason;
+  description: string;
+  contact_phone: string | null;
+  admin_note: string | null;
+  items: ClaimItem[];
+  evidence: ClaimEvidence[];
+  history: ClaimHistoryEntry[];
+  created_at: string;
+  updated_at: string;
+  resolved_at: string | null;
+}
+
+export interface ClaimSummary {
+  claim_number: string;
+  order_no: string;
+  status: ClaimStatus;
+  reason: ClaimReason;
+  product_name: string;
+  business: BusinessType;
+  business_name: string;
+  item_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ClaimableItem {
+  order_item_id: number;
+  product_id: string;
+  product_name: string;
+  business: BusinessType;
+  business_name: string;
+  category: string;
+  image_url: string;
+  unit_price: number;
+  purchased_quantity: number;
+  claimed_quantity: number;
+  claimable_quantity: number;
+}
+
+export interface ClaimableItemsResponse {
+  order_no: string;
+  eligible: boolean;
+  ineligible_reason: string | null;
+  items: ClaimableItem[];
+}
+
+export interface ClaimListPage {
+  claims: ClaimSummary[];
+  total: number;
+  page: number;
+  page_size: number;
+}

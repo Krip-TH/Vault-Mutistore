@@ -11,7 +11,11 @@ import ProductImage from './ProductImage';
 interface Props {
   visible: boolean;
   onClose: () => void;
+  onSubmitClaim: (orderNo: string) => void;
 }
+
+/** A claim needs goods the customer has received. Mirrors backend/src/types/claim.ts's claimableOrderStatuses. */
+const claimableOrderStatuses = ['shipped', 'completed'];
 
 const statusColor: Record<string, string> = {
   pending: colors.lowStock,
@@ -25,7 +29,7 @@ const statusColor: Record<string, string> = {
 const dateTimeFormat = (value: string) =>
   new Date(value).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
-export default function OrdersModal({ visible, onClose }: Props) {
+export default function OrdersModal({ visible, onClose, onSubmitClaim }: Props) {
   const insets = useSafeAreaInsets();
   const [orders, setOrders] = useState<OrderSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -94,6 +98,7 @@ export default function OrdersModal({ visible, onClose }: Props) {
             loading={detailLoading}
             error={detailError}
             onRetry={() => void openOrder(selectedNo)}
+            onSubmitClaim={() => onSubmitClaim(selectedNo)}
             insetBottom={insets.bottom}
           />
         ) : (
@@ -169,8 +174,9 @@ function OrderList({ orders, loading, error, onRetry, onOpen, insetBottom }: {
   );
 }
 
-function OrderDetail({ orderNo, order, loading, error, onRetry, insetBottom }: {
-  orderNo: string; order: Order | null; loading: boolean; error: string; onRetry: () => void; insetBottom: number;
+function OrderDetail({ orderNo, order, loading, error, onRetry, onSubmitClaim, insetBottom }: {
+  orderNo: string; order: Order | null; loading: boolean; error: string; onRetry: () => void;
+  onSubmitClaim: () => void; insetBottom: number;
 }) {
   if (loading) {
     return (
@@ -241,6 +247,18 @@ function OrderDetail({ orderNo, order, loading, error, onRetry, insetBottom }: {
           <Text style={styles.grandTotalValue}>{formatTHB(order.total)}</Text>
         </View>
       </View>
+
+      {claimableOrderStatuses.includes(order.status) && (
+        <View style={styles.claimPanel}>
+          <Text style={styles.eyebrowSmall}>CLAIM / WARRANTY</Text>
+          <Text style={styles.stateBody}>
+            Something arrived wrong? Submit a claim for any product on this order.
+          </Text>
+          <Pressable style={styles.secondaryButton} onPress={onSubmitClaim}>
+            <Text style={styles.secondaryButtonText}>Submit a claim</Text>
+          </Pressable>
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -281,4 +299,7 @@ const styles = StyleSheet.create({
   grandTotalRow: { marginTop: 6, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.headerBorder },
   grandTotalLabel: { fontSize: 13, color: colors.text, fontWeight: '600' },
   grandTotalValue: { fontSize: 15, color: colors.text, fontWeight: '600' },
+  claimPanel: { marginTop: 20, paddingTop: 16, borderTopWidth: 1, borderTopColor: colors.headerBorder, gap: 10 },
+  secondaryButton: { borderWidth: 1, borderColor: colors.cardBorder, borderRadius: 20, paddingVertical: 12, alignItems: 'center' },
+  secondaryButtonText: { fontSize: 12, color: colors.text, fontWeight: '500' },
 });

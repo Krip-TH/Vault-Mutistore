@@ -18,6 +18,8 @@ import AdminScreen from '../components/admin/AdminScreen';
 import BestSellersModal from '../components/BestSellersModal';
 import CartModal from '../components/CartModal';
 import CheckoutModal from '../components/CheckoutModal';
+import ClaimFormModal from '../components/ClaimFormModal';
+import MyClaimsModal from '../components/MyClaimsModal';
 import OrdersModal from '../components/OrdersModal';
 import ProductCard from '../components/ProductCard';
 import ProductDetailModal from '../components/ProductDetailModal';
@@ -54,6 +56,9 @@ export default function ProductsScreen() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
   const [bestSellersOpen, setBestSellersOpen] = useState(false);
+  const [claimOrderNo, setClaimOrderNo] = useState<string | null>(null);
+  const [myClaimsOpen, setMyClaimsOpen] = useState(false);
+  const [myClaimsInitialNumber, setMyClaimsInitialNumber] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
@@ -169,6 +174,9 @@ export default function ProductsScreen() {
           <Pressable onPress={() => setOrdersOpen(true)} hitSlop={8}>
             <Text style={styles.linkText}>Orders</Text>
           </Pressable>
+          <Pressable onPress={() => { setMyClaimsInitialNumber(null); setMyClaimsOpen(true); }} hitSlop={8}>
+            <Text style={styles.linkText}>Claims</Text>
+          </Pressable>
           <Pressable
             onPress={() => setCartOpen(true)}
             hitSlop={8}
@@ -232,12 +240,32 @@ export default function ProductsScreen() {
         onClose={() => setCheckoutOpen(false)}
         onContinueShopping={() => setCheckoutOpen(false)}
       />
-      <OrdersModal visible={ordersOpen} onClose={() => setOrdersOpen(false)} />
+      <OrdersModal
+        visible={ordersOpen}
+        onClose={() => setOrdersOpen(false)}
+        onSubmitClaim={orderNo => setClaimOrderNo(orderNo)}
+      />
       <ProfileModal visible={profileOpen} onClose={() => setProfileOpen(false)} />
       <BestSellersModal
         visible={bestSellersOpen}
         onClose={() => setBestSellersOpen(false)}
         onSelectProduct={product => { setBestSellersOpen(false); setSelected(product); }}
+      />
+      <ClaimFormModal
+        visible={!!claimOrderNo}
+        orderNo={claimOrderNo}
+        onClose={() => setClaimOrderNo(null)}
+        onSubmitted={claim => {
+          setClaimOrderNo(null);
+          setOrdersOpen(false);
+          setMyClaimsInitialNumber(claim.claim_number);
+          setMyClaimsOpen(true);
+        }}
+      />
+      <MyClaimsModal
+        visible={myClaimsOpen}
+        initialClaimNumber={myClaimsInitialNumber}
+        onClose={() => setMyClaimsOpen(false)}
       />
       {user?.role === 'admin' && <AdminScreen visible={adminOpen} onClose={() => setAdminOpen(false)} />}
     </View>
@@ -259,7 +287,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.headerBorder,
   },
   brandGroup: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  accountGroup: { flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 1 },
+  accountGroup: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-end', gap: 10, flexShrink: 1 },
   linkText: { fontSize: 11, color: colors.text, fontWeight: '600' },
   adminLinkText: { fontSize: 11, color: '#8f6846', fontWeight: '700' },
   cartText: { fontSize: 11, color: colors.text, fontWeight: '600' },

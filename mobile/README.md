@@ -8,12 +8,12 @@ This is a pilot, not a port. It reuses the existing Express backend — extended
 replaced, see "Auth" below — and re-implements sign-in/register, product browsing and
 detail, cart, checkout, order history, the customer profile, the four AI features
 (search, chat, recommendations, descriptions), the admin dashboard (analytics, orders,
-product CRUD, user and business management), and Best Sellers.
+product CRUD, user and business management), Best Sellers, and the customer side of the
+product-claims/warranty system.
 
-The `dev` branch has since grown a product-claims/warranty system and a database-aware
-AI assistant (merged into this branch's history, see `backend/src/services/claimService.ts`
-and `backend/src/services/ai/databaseChatService.ts`); neither has a React Native screen
-yet — see "Effort estimate" below.
+The `dev` branch has also grown a database-aware AI assistant (merged into this branch's
+history, see `backend/src/services/ai/databaseChatService.ts`), and the claims system has
+an admin side too; neither has a React Native screen yet — see "Effort estimate" below.
 
 ## Auth
 
@@ -101,6 +101,15 @@ unrelated to this project. See the [Expo changelog](https://expo.dev/changelog/e
   completed orders, paired with each product's live price and stock (`/api/products/best-sellers`),
   reusing `ProductCard` and opening straight into the same product detail view as the
   main collection.
+- Product claims/warranty (customer side), behind a "Submit a claim" button on any
+  shipped or delivered order and a "Claims" header link: pick the affected products and
+  quantities, choose a reason, describe the problem, and attach up to 5 evidence photos
+  (`expo-image-picker`, uploaded as multipart form data); My Claims lists every claim
+  with a status filter, and its detail view shows the claimed products, a progress
+  timeline built from the claim's history, the evidence gallery (loaded through an
+  authenticated request, since evidence is private — see `src/claimApi.ts`), and a cancel
+  action while the claim is still early enough to cancel. Ported from
+  `frontend/src/components/ClaimForm.tsx` and `MyClaims.tsx`.
 
 ## What matched the web, and what could not
 
@@ -130,11 +139,14 @@ markup or CSS with the web. What's still missing to cover the rest of the web ap
   reached through modals and local state instead of React Navigation, which is what a
   full app with more than a handful of screens would need,
 - favourites (the web's "save for later") are not built,
-- the product-claims/warranty system (`backend/src/services/claimService.ts`,
-  `backend/src/controllers/claimController.ts` and `adminClaimController.ts`) has no
-  mobile screens yet — customer claim submission with evidence photos, claim status
-  tracking, and the admin claims queue would each need a React Native equivalent of the
-  web's `ClaimForm`, `MyClaims` and `AdminClaims`,
+- the printable claim/warranty document (`frontend/src/components/ClaimDocument.tsx`,
+  the web's `WarrantyDocument` and `ClaimPrintDocument`) was skipped — printing to PDF
+  is not a mobile pattern, and the mobile claim form already shows eligibility and the
+  claimable items directly, so nothing is lost for the customer, only the standalone
+  printable view,
+- the admin side of claims (`backend/src/controllers/adminClaimController.ts`, the web's
+  `AdminClaims.tsx`) has no mobile screen yet — it would slot into the existing
+  `AdminScreen` tab pattern (`src/components/admin/`) alongside Orders and Products,
 - the database-aware AI assistant (`backend/src/services/ai/databaseChatService.ts`) is
   not wired into `AiChatWidget.tsx` — it would need its own request path alongside the
   existing `/api/ai/chat`.
