@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
+import { resolveApiUrl } from '../config';
 import { colors, serif } from '../theme';
 import type { Product } from '../types';
 
@@ -7,6 +8,8 @@ type ImageableProduct = Pick<Product, 'image_url' | 'name' | 'business_name' | '
 
 export default function ProductImage({ product }: { product: ImageableProduct }) {
   const [failed, setFailed] = useState(false);
+
+  useEffect(() => setFailed(false), [product.image_url]);
 
   if (!product.image_url || failed) {
     return (
@@ -24,7 +27,7 @@ export default function ProductImage({ product }: { product: ImageableProduct })
 
   return (
     <Image
-      source={{ uri: product.image_url }}
+      source={{ uri: resolveApiUrl(product.image_url) }}
       style={styles.image}
       resizeMode="contain"
       onError={() => setFailed(true)}

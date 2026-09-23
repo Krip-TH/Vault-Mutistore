@@ -1,5 +1,6 @@
 import { authorizedHeaders, errorMessage } from './api';
-import { API_BASE_URL, REQUEST_TIMEOUT_MS } from './config';
+import { API_BASE_URL } from './config';
+import { apiFetch } from './http';
 import type {
   AdminAnalytics, AdminClaim, AdminClaimStatusUpdate, AdminClaimSummary, AdminOrder, AdminOrderSummary,
   AdminProduct, AdminProductInput, ManagedBusiness, ManagedUser, ManagedUserInput, OrderStatus, ProductOptions,
@@ -16,13 +17,13 @@ const base = `${API_BASE_URL}/api/admin`;
 const jsonHeaders = () => authorizedHeaders({ 'Content-Type': 'application/json' });
 
 async function getJson<T>(path: string, fallback: string): Promise<T> {
-  const response = await fetch(`${base}${path}`, { headers: await authorizedHeaders(), signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+  const response = await apiFetch(`${base}${path}`, { headers: await authorizedHeaders() });
   return readData<T>(response, fallback);
 }
 
 async function sendJson<T>(path: string, method: string, body: unknown, fallback: string): Promise<T> {
-  const response = await fetch(`${base}${path}`, {
-    method, headers: await jsonHeaders(), body: JSON.stringify(body), signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  const response = await apiFetch(`${base}${path}`, {
+    method, headers: await jsonHeaders(), body: JSON.stringify(body),
   });
   return readData<T>(response, fallback);
 }
@@ -46,8 +47,8 @@ export const updateAdminProduct = (product: AdminProduct, input: AdminProductInp
   sendJson<AdminProduct>(`/products/${encodeURIComponent(product.business)}/${encodeURIComponent(product.id)}`, 'PUT', input, 'Unable to update the product.');
 
 export async function deleteAdminProduct(product: AdminProduct): Promise<void> {
-  const response = await fetch(`${base}/products/${encodeURIComponent(product.business)}/${encodeURIComponent(product.id)}`, {
-    method: 'DELETE', headers: await authorizedHeaders(), signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  const response = await apiFetch(`${base}/products/${encodeURIComponent(product.business)}/${encodeURIComponent(product.id)}`, {
+    method: 'DELETE', headers: await authorizedHeaders(),
   });
   if (!response.ok) await readData<never>(response, 'Unable to delete the product.');
 }
@@ -55,8 +56,8 @@ export async function deleteAdminProduct(product: AdminProduct): Promise<void> {
 export async function uploadAdminProductImage(asset: { uri: string; fileName?: string | null; mimeType?: string }): Promise<string> {
   const body = new FormData();
   body.append('image', { uri: asset.uri, name: asset.fileName || 'product.jpg', type: asset.mimeType || 'image/jpeg' } as unknown as Blob);
-  const response = await fetch(`${base}/products/upload-image`, {
-    method: 'POST', headers: await authorizedHeaders(), body, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  const response = await apiFetch(`${base}/products/upload-image`, {
+    method: 'POST', headers: await authorizedHeaders(), body,
   });
   const data = await readData<{ image_url: string }>(response, 'Unable to upload the image.');
   if (!data.image_url) throw new Error('The image upload response was incomplete.');
@@ -68,7 +69,7 @@ export const fetchAdminUsers = () => getJson<ManagedUser[]>('/users', 'Unable to
 export const createAdminUser = (input: ManagedUserInput) => sendJson<ManagedUser>('/users', 'POST', input, 'Unable to create user.');
 export const updateAdminUser = (id: number, input: Partial<ManagedUserInput>) => sendJson<ManagedUser>(`/users/${id}`, 'PUT', input, 'Unable to update user.');
 export async function deleteAdminUser(id: number): Promise<void> {
-  const response = await fetch(`${base}/users/${id}`, { method: 'DELETE', headers: await authorizedHeaders(), signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+  const response = await apiFetch(`${base}/users/${id}`, { method: 'DELETE', headers: await authorizedHeaders() });
   if (!response.ok) await readData<never>(response, 'Unable to delete user.');
 }
 

@@ -1,12 +1,13 @@
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
+  ActivityIndicator, Alert, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import {
   createAdminProduct, deleteAdminProduct, fetchAdminProduct, fetchAdminProductOptions,
   fetchAdminProducts, updateAdminProduct, uploadAdminProductImage,
 } from '../../adminApi';
+import { resolveApiUrl } from '../../config';
 import { formatTHB } from '../../format';
 import { colors, serif } from '../../theme';
 import type { AdminProduct, AdminProductInput, ProductOptions } from '../../types';
@@ -72,6 +73,18 @@ export default function AdminProductsView() {
     }
   }
 
+  function confirmRemove(product: AdminProduct) {
+    if (!product.can_delete) return;
+    Alert.alert(
+      'Delete product?',
+      `${product.name} will be permanently removed from the VAULT catalog.`,
+      [
+        { text: 'Keep product', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: () => { void remove(product); } },
+      ],
+    );
+  }
+
   if (loading) return <ActivityIndicator color={colors.darkGreen} style={styles.spacer} />;
 
   return (
@@ -83,7 +96,7 @@ export default function AdminProductsView() {
           product={selected}
           onBack={() => setSelected(null)}
           onEdit={() => setEditing(selected)}
-          onDelete={() => void remove(selected)}
+          onDelete={() => confirmRemove(selected)}
         />
       ) : (
         <>
@@ -131,7 +144,7 @@ export default function AdminProductsView() {
                 <View style={styles.rowActions}>
                   <Pressable onPress={() => void open(product)}><Text style={styles.actionLink}>Open</Text></Pressable>
                   {product.can_edit && <Pressable onPress={() => setEditing(product)}><Text style={styles.actionLink}>Edit</Text></Pressable>}
-                  {product.can_delete && <Pressable onPress={() => void remove(product)}><Text style={styles.actionLinkDanger}>Delete</Text></Pressable>}
+                  {product.can_delete && <Pressable onPress={() => confirmRemove(product)}><Text style={styles.actionLinkDanger}>Delete</Text></Pressable>}
                 </View>
               </View>
             ))
@@ -233,7 +246,7 @@ function ProductForm({ product, options, onClose, onSaved }: {
     }
   }
 
-  const preview = asset?.uri || value.image_url;
+  const preview = asset?.uri || (value.image_url ? resolveApiUrl(value.image_url) : '');
 
   return (
     <ScrollView contentContainerStyle={styles.formContent}>

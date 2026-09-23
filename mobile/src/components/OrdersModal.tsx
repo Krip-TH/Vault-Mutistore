@@ -11,6 +11,7 @@ import ProductImage from './ProductImage';
 interface Props {
   visible: boolean;
   onClose: () => void;
+  onDismiss?: () => void;
   onSubmitClaim: (orderNo: string) => void;
 }
 
@@ -29,7 +30,7 @@ const statusColor: Record<string, string> = {
 const dateTimeFormat = (value: string) =>
   new Date(value).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
-export default function OrdersModal({ visible, onClose, onSubmitClaim }: Props) {
+export default function OrdersModal({ visible, onClose, onDismiss, onSubmitClaim }: Props) {
   const insets = useSafeAreaInsets();
   const [orders, setOrders] = useState<OrderSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -76,7 +77,7 @@ export default function OrdersModal({ visible, onClose, onSubmitClaim }: Props) 
   }
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose} onDismiss={onDismiss}>
       <View style={[styles.sheet, { paddingTop: insets.top ? 0 : 12 }]}>
         <View style={styles.topBar}>
           {selectedNo ? (
@@ -254,7 +255,13 @@ function OrderDetail({ orderNo, order, loading, error, onRetry, onSubmitClaim, i
           <Text style={styles.stateBody}>
             Something arrived wrong? Submit a claim for any product on this order.
           </Text>
-          <Pressable style={styles.secondaryButton} onPress={onSubmitClaim}>
+          <Pressable
+            style={styles.secondaryButton}
+            onPress={() => {
+              console.log('[Claim] Submit claim pressed', order.order_no);
+              onSubmitClaim();
+            }}
+          >
             <Text style={styles.secondaryButtonText}>Submit a claim</Text>
           </Pressable>
         </View>

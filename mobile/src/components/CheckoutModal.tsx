@@ -17,6 +17,7 @@ interface Props {
   visible: boolean;
   onClose: () => void;
   onContinueShopping: () => void;
+  onViewOrders: () => void;
 }
 
 type FieldName = keyof CheckoutForm;
@@ -33,7 +34,7 @@ const fields: Array<{ name: FieldName; label: string; optional?: boolean; keyboa
   { name: 'country', label: 'Country' },
 ];
 
-export default function CheckoutModal({ visible, onClose, onContinueShopping }: Props) {
+export default function CheckoutModal({ visible, onClose, onContinueShopping, onViewOrders }: Props) {
   const insets = useSafeAreaInsets();
   const cart = useCart();
   const [form, setForm] = useState<CheckoutForm>(initialCheckoutForm);
@@ -71,23 +72,29 @@ export default function CheckoutModal({ visible, onClose, onContinueShopping }: 
     setOrder(null);
   }
 
+  function close() {
+    if (order) reset();
+    onClose();
+  }
+
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={submitting ? () => undefined : close}>
       <KeyboardAvoidingView style={styles.sheet} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {order ? (
           <OrderConfirmation
             order={order}
             insetBottom={insets.bottom}
             onContinue={() => { reset(); onClose(); onContinueShopping(); }}
+            onViewOrders={() => { reset(); onClose(); onViewOrders(); }}
           />
         ) : (
           <>
             <View style={styles.topBar}>
-              <Pressable onPress={onClose} disabled={submitting} hitSlop={8}>
+              <Pressable onPress={close} disabled={submitting} hitSlop={8}>
                 <Text style={styles.backText}>← Return to cart</Text>
               </Pressable>
               <Text style={styles.eyebrow}>SECURE ORDER</Text>
-              <Pressable onPress={onClose} disabled={submitting} hitSlop={8}>
+              <Pressable onPress={close} disabled={submitting} hitSlop={8}>
                 <Text style={styles.close}>×</Text>
               </Pressable>
             </View>
@@ -166,7 +173,9 @@ export default function CheckoutModal({ visible, onClose, onContinueShopping }: 
   );
 }
 
-function OrderConfirmation({ order, onContinue, insetBottom }: { order: Order; onContinue: () => void; insetBottom: number }) {
+function OrderConfirmation({ order, onContinue, onViewOrders, insetBottom }: {
+  order: Order; onContinue: () => void; onViewOrders: () => void; insetBottom: number;
+}) {
   return (
     <ScrollView contentContainerStyle={[styles.confirmation, { paddingBottom: insetBottom + 32 }]}>
       <Text style={styles.confirmationMark}>✓</Text>
@@ -204,6 +213,9 @@ function OrderConfirmation({ order, onContinue, insetBottom }: { order: Order; o
 
       <Pressable style={styles.submitButton} onPress={onContinue}>
         <Text style={styles.submitText}>Continue shopping</Text>
+      </Pressable>
+      <Pressable style={styles.secondaryButton} onPress={onViewOrders}>
+        <Text style={styles.secondaryButtonText}>View my orders</Text>
       </Pressable>
     </ScrollView>
   );
@@ -248,6 +260,8 @@ const styles = StyleSheet.create({
   submitButtonPressed: { backgroundColor: '#3a5745' },
   submitButtonDisabled: { opacity: 0.5 },
   submitText: { color: '#fff', fontSize: 14, fontWeight: '500' },
+  secondaryButton: { borderWidth: 1, borderColor: colors.cardBorder, borderRadius: 30, paddingVertical: 14, alignItems: 'center', marginTop: 10, width: '100%' },
+  secondaryButtonText: { color: colors.text, fontSize: 13, fontWeight: '500' },
   assurance: { fontSize: 10, color: colors.muted, textAlign: 'center', marginTop: 14, lineHeight: 15 },
   confirmation: { paddingHorizontal: 22, paddingTop: 40, alignItems: 'center' },
   confirmationMark: { fontSize: 40, color: colors.inStock, marginBottom: 14 },

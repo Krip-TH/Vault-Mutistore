@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   FlatList,
   Image,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -60,6 +61,8 @@ export default function ProductsScreen() {
   const [adminOpen, setAdminOpen] = useState(false);
   const [bestSellersOpen, setBestSellersOpen] = useState(false);
   const [claimOrderNo, setClaimOrderNo] = useState<string | null>(null);
+  const [pendingClaimOrderNo, setPendingClaimOrderNo] = useState<string | null>(null);
+  const [afterClaimDismiss, setAfterClaimDismiss] = useState<'orders' | 'claims' | null>(null);
   const [myClaimsOpen, setMyClaimsOpen] = useState(false);
   const [myClaimsInitialNumber, setMyClaimsInitialNumber] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -70,6 +73,45 @@ export default function ProductsScreen() {
     else if (target === 'claims') { setMyClaimsInitialNumber(null); setMyClaimsOpen(true); }
     else if (target === 'profile') setProfileOpen(true);
     else if (target === 'admin') setAdminOpen(true);
+  }
+
+  function beginClaim(orderNo: string) {
+    // Orders and the claim form are separate native Modals. iOS must finish
+    // dismissing the first one before it can present the second reliably.
+    setOrdersOpen(false);
+    if (Platform.OS === 'ios') {
+      setPendingClaimOrderNo(orderNo);
+    } else {
+      requestAnimationFrame(() => {
+        console.log('[Claim] Navigating to claim form', orderNo);
+        setClaimOrderNo(orderNo);
+      });
+    }
+  }
+
+  function openPendingClaim() {
+    if (!pendingClaimOrderNo) return;
+    console.log('[Claim] Navigating to claim form', pendingClaimOrderNo);
+    setClaimOrderNo(pendingClaimOrderNo);
+    setPendingClaimOrderNo(null);
+  }
+
+  function finishClaimDismissal() {
+    if (afterClaimDismiss === 'orders') setOrdersOpen(true);
+    else if (afterClaimDismiss === 'claims') setMyClaimsOpen(true);
+    setAfterClaimDismiss(null);
+  }
+
+  function dismissClaimForm(destination: 'orders' | 'claims') {
+    setClaimOrderNo(null);
+    if (Platform.OS === 'ios') {
+      setAfterClaimDismiss(destination);
+    } else {
+      requestAnimationFrame(() => {
+        if (destination === 'orders') setOrdersOpen(true);
+        else setMyClaimsOpen(true);
+      });
+    }
   }
 
   const load = useCallback(async () => {
@@ -238,11 +280,13 @@ export default function ProductsScreen() {
         visible={checkoutOpen}
         onClose={() => setCheckoutOpen(false)}
         onContinueShopping={() => setCheckoutOpen(false)}
+        onViewOrders={() => setOrdersOpen(true)}
       />
       <OrdersModal
         visible={ordersOpen}
         onClose={() => setOrdersOpen(false)}
-        onSubmitClaim={orderNo => setClaimOrderNo(orderNo)}
+        onDismiss={openPendingClaim}
+        onSubmitClaim={beginClaim}
       />
       <ProfileModal visible={profileOpen} onClose={() => setProfileOpen(false)} />
       <BestSellersModal
@@ -253,12 +297,11 @@ export default function ProductsScreen() {
       <ClaimFormModal
         visible={!!claimOrderNo}
         orderNo={claimOrderNo}
-        onClose={() => setClaimOrderNo(null)}
+        onClose={() => dismissClaimForm('orders')}
+        onDismiss={finishClaimDismissal}
         onSubmitted={claim => {
-          setClaimOrderNo(null);
-          setOrdersOpen(false);
           setMyClaimsInitialNumber(claim.claim_number);
-          setMyClaimsOpen(true);
+          dismissClaimForm('claims');
         }}
       />
       <MyClaimsModal

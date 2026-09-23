@@ -28,14 +28,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     AsyncStorage.getItem(CART_STORAGE_KEY)
       .then(raw => setItems(parseStoredCart(raw)))
-      .catch(() => { /* The in-memory cart remains usable. */ })
+      .catch(error => { console.warn('[VAULT cart] Unable to restore the saved cart; using an empty in-memory cart.', error); })
       .finally(() => { hydrating.current = false; setLoaded(true); });
   }, []);
 
   useEffect(() => {
     if (hydrating.current) return; // Don't overwrite storage with the empty initial state.
-    AsyncStorage.setItem(CART_STORAGE_KEY, serializeCart(items)).catch(() => {
-      /* The in-memory cart remains usable. */
+    AsyncStorage.setItem(CART_STORAGE_KEY, serializeCart(items)).catch(error => {
+      console.warn('[VAULT cart] Unable to persist the cart; the in-memory cart remains usable.', error);
     });
   }, [items]);
 

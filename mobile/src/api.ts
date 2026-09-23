@@ -1,5 +1,6 @@
 import { getStoredToken } from './auth/AuthContext';
-import { API_BASE_URL, REQUEST_TIMEOUT_MS } from './config';
+import { API_BASE_URL } from './config';
+import { apiFetch } from './http';
 import type {
   ApiErrorResponse, BestSeller, BestSellersResponse, BusinessAvailability, CreateOrderRequest,
   Order, OrderSummary, Product, ProductsResponse,
@@ -11,9 +12,8 @@ export interface ProductsResult {
 }
 
 export async function fetchProducts(): Promise<ProductsResult> {
-  const response = await fetch(`${API_BASE_URL}/api/products`, {
+  const response = await apiFetch(`${API_BASE_URL}/api/products`, {
     headers: { Accept: 'application/json' },
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
 
   if (!response.ok) {
@@ -32,9 +32,8 @@ export async function fetchProducts(): Promise<ProductsResult> {
 }
 
 export async function fetchBestSellers(limit = 10): Promise<BestSeller[]> {
-  const response = await fetch(`${API_BASE_URL}/api/products/best-sellers?limit=${encodeURIComponent(limit)}`, {
+  const response = await apiFetch(`${API_BASE_URL}/api/products/best-sellers?limit=${encodeURIComponent(limit)}`, {
     headers: { Accept: 'application/json' },
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   if (!response.ok) throw new Error(await errorMessage(response, 'Unable to load best sellers right now.'));
   const payload = (await response.json()) as BestSellersResponse;
@@ -43,6 +42,7 @@ export async function fetchBestSellers(limit = 10): Promise<BestSeller[]> {
 }
 
 export async function errorMessage(response: Response, fallback: string): Promise<string> {
+  console.warn(`[VAULT API] HTTP ${response.status} ${response.url}`);
   try {
     const payload = (await response.json()) as ApiErrorResponse;
     return payload.error?.message || fallback;
@@ -59,11 +59,10 @@ export async function authorizedHeaders(extra?: Record<string, string>): Promise
 }
 
 export async function placeOrder(request: CreateOrderRequest): Promise<Order> {
-  const response = await fetch(`${API_BASE_URL}/api/orders`, {
+  const response = await apiFetch(`${API_BASE_URL}/api/orders`, {
     method: 'POST',
     headers: await authorizedHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(request),
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   if (!response.ok) throw new Error(await errorMessage(response, 'Unable to place the order. Please try again.'));
   const payload = (await response.json()) as { data?: Order };
@@ -78,9 +77,8 @@ export async function completeCheckout(request: CreateOrderRequest, clearCart: (
 }
 
 export async function fetchOrders(): Promise<OrderSummary[]> {
-  const response = await fetch(`${API_BASE_URL}/api/orders`, {
+  const response = await apiFetch(`${API_BASE_URL}/api/orders`, {
     headers: await authorizedHeaders(),
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   if (!response.ok) throw new Error(await errorMessage(response, 'Unable to load order history. Please try again.'));
   const payload = (await response.json()) as { data?: OrderSummary[] };
@@ -89,9 +87,8 @@ export async function fetchOrders(): Promise<OrderSummary[]> {
 }
 
 export async function fetchOrder(orderNo: string): Promise<Order> {
-  const response = await fetch(`${API_BASE_URL}/api/orders/${encodeURIComponent(orderNo)}`, {
+  const response = await apiFetch(`${API_BASE_URL}/api/orders/${encodeURIComponent(orderNo)}`, {
     headers: await authorizedHeaders(),
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   if (!response.ok) throw new Error(await errorMessage(response, 'Unable to retrieve the saved order.'));
   const payload = (await response.json()) as { data?: Order };

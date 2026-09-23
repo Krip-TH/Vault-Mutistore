@@ -18,21 +18,20 @@ export default function AiSearchBar({ onSelectProduct }: Props) {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AiResult | null>(null);
-  const [available, setAvailable] = useState(true);
-
-  if (!available) return null;
+  const [error, setError] = useState('');
 
   async function runSearch() {
     const trimmed = query.trim();
     if (!trimmed || loading) return;
     setLoading(true);
+    setError('');
     try {
       const response = await searchProductsWithAi(trimmed);
       setResult({ data: response.data, explanation: response.explanation });
-    } catch {
-      // AI features must never break the app: fail silently and hide the widget.
+    } catch (requestError) {
+      console.error('[VAULT AI] Product search failed.', requestError);
       setResult(null);
-      setAvailable(false);
+      setError(requestError instanceof Error ? requestError.message : 'AI search is unavailable right now.');
     } finally {
       setLoading(false);
     }
@@ -41,6 +40,7 @@ export default function AiSearchBar({ onSelectProduct }: Props) {
   function clear() {
     setQuery('');
     setResult(null);
+    setError('');
   }
 
   return (
@@ -79,6 +79,8 @@ export default function AiSearchBar({ onSelectProduct }: Props) {
         </View>
       )}
 
+      {!loading && !!error && <Text style={styles.error} accessibilityRole="alert">{error}</Text>}
+
       {!loading && result && (
         <View style={styles.results}>
           <Text style={styles.explanation}>✦ {result.explanation}</Text>
@@ -113,6 +115,7 @@ const styles = StyleSheet.create({
   submitText: { color: '#fff', fontSize: 13, fontWeight: '600' },
   clearText: { fontSize: 11, color: colors.darkGreen, textDecorationLine: 'underline', textAlign: 'center' },
   loadingRow: { paddingVertical: 20, alignItems: 'center' },
+  error: { color: '#8c3f38', fontSize: 11, lineHeight: 16, marginTop: 12 },
   results: { marginTop: 16 },
   explanation: { fontSize: 12, color: '#3b5541', marginBottom: 12 },
   emptyState: { paddingVertical: 20, alignItems: 'center' },

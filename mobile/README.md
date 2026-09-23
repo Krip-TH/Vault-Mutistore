@@ -34,10 +34,10 @@ sends it as a Bearer header on every request that needs it.
 
 1. Start the VAULT backend as usual (`docker compose up -d` in the repository root).
 2. Point the app at the computer running that backend. A phone cannot reach `localhost`,
-   so edit `src/config.ts` and set `API_BASE_URL` to that computer's LAN IP:
+   so copy `.env.example` to `.env` and set `EXPO_PUBLIC_API_BASE_URL` to that computer's LAN IP:
 
-   ```ts
-   export const API_BASE_URL = 'http://192.168.1.50:3000';
+   ```dotenv
+   EXPO_PUBLIC_API_BASE_URL=http://192.168.1.50:3000
    ```
 
    Find the IP with `ipconfig` on Windows (IPv4 Address of the Wi-Fi adapter).

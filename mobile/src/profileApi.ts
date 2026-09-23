@@ -1,6 +1,7 @@
 import type { ImagePickerAsset } from 'expo-image-picker';
 import { authorizedHeaders, errorMessage } from './api';
-import { API_BASE_URL, REQUEST_TIMEOUT_MS } from './config';
+import { API_BASE_URL, resolveApiUrl } from './config';
+import { apiFetch } from './http';
 import type { Profile, ProfileForm } from './types';
 
 async function readProfile(response: Response, fallback: string): Promise<Profile> {
@@ -11,20 +12,18 @@ async function readProfile(response: Response, fallback: string): Promise<Profil
 }
 
 export async function fetchProfile(): Promise<Profile> {
-  const response = await fetch(`${API_BASE_URL}/api/profile`, {
+  const response = await apiFetch(`${API_BASE_URL}/api/profile`, {
     headers: await authorizedHeaders(),
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   return readProfile(response, 'Unable to load your profile.');
 }
 
 /** The server identifies the user from the Bearer token; no user id is ever sent. */
 export async function updateProfile(form: ProfileForm): Promise<Profile> {
-  const response = await fetch(`${API_BASE_URL}/api/profile`, {
+  const response = await apiFetch(`${API_BASE_URL}/api/profile`, {
     method: 'PUT',
     headers: await authorizedHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(form),
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   return readProfile(response, 'Unable to save your profile. Please try again.');
 }
@@ -39,20 +38,18 @@ export async function uploadProfileImage(asset: ImagePickerAsset): Promise<Profi
     type: asset.mimeType || 'image/jpeg',
   } as unknown as Blob);
 
-  const response = await fetch(`${API_BASE_URL}/api/profile/image`, {
+  const response = await apiFetch(`${API_BASE_URL}/api/profile/image`, {
     method: 'POST',
     headers: await authorizedHeaders(),
     body,
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   return readProfile(response, 'Unable to upload your photo. Please try again.');
 }
 
 export async function removeProfileImage(): Promise<Profile> {
-  const response = await fetch(`${API_BASE_URL}/api/profile/image`, {
+  const response = await apiFetch(`${API_BASE_URL}/api/profile/image`, {
     method: 'DELETE',
     headers: await authorizedHeaders(),
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   return readProfile(response, 'Unable to remove your photo. Please try again.');
 }
@@ -61,5 +58,5 @@ export async function removeProfileImage(): Promise<Profile> {
  *  resolves that against its own origin, but React Native has no such origin and needs the full URL. */
 export function resolveImageUrl(path: string | null): string | undefined {
   if (!path) return undefined;
-  return path.startsWith('http') ? path : `${API_BASE_URL}${path}`;
+  return resolveApiUrl(path);
 }

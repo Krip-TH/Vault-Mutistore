@@ -13,14 +13,11 @@ export default function AiChatWidget() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [available, setAvailable] = useState(true);
   const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     if (open) requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
   }, [messages, open, loading]);
-
-  if (!available) return null;
 
   async function send() {
     const trimmed = input.trim();
@@ -32,9 +29,10 @@ export default function AiChatWidget() {
     try {
       const response = await sendChatMessage(history);
       setMessages([...history, { role: 'assistant', content: response.reply }]);
-    } catch {
-      // AI features must never break the app: fail silently and hide the widget.
-      setAvailable(false);
+    } catch (requestError) {
+      console.error('[VAULT AI] Chat request failed.', requestError);
+      const message = requestError instanceof Error ? requestError.message : 'The assistant is unavailable right now.';
+      setMessages([...history, { role: 'assistant', content: message }]);
     } finally {
       setLoading(false);
     }
