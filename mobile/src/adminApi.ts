@@ -1,8 +1,8 @@
 import { authorizedHeaders, errorMessage } from './api';
 import { API_BASE_URL, REQUEST_TIMEOUT_MS } from './config';
 import type {
-  AdminAnalytics, AdminOrder, AdminOrderSummary, AdminProduct, AdminProductInput,
-  ManagedBusiness, ManagedUser, ManagedUserInput, OrderStatus, ProductOptions,
+  AdminAnalytics, AdminClaim, AdminClaimStatusUpdate, AdminClaimSummary, AdminOrder, AdminOrderSummary,
+  AdminProduct, AdminProductInput, ManagedBusiness, ManagedUser, ManagedUserInput, OrderStatus, ProductOptions,
 } from './types';
 
 async function readData<T>(response: Response, fallback: string): Promise<T> {
@@ -76,3 +76,9 @@ export async function deleteAdminUser(id: number): Promise<void> {
 export const fetchAdminBusinesses = () => getJson<ManagedBusiness[]>('/businesses', 'Unable to load businesses.');
 export const updateAdminBusiness = (id: number, input: Pick<ManagedBusiness, 'name' | 'api_url' | 'status'>) =>
   sendJson<ManagedBusiness>(`/businesses/${id}`, 'PUT', input, 'Unable to update business.');
+
+// Claims
+export const fetchAdminClaims = () => getJson<AdminClaimSummary[]>('/claims', 'Unable to load claims.');
+export const fetchAdminClaim = (claimNo: string) => getJson<AdminClaim>(`/claims/${encodeURIComponent(claimNo)}`, 'Unable to load this claim.');
+export const updateAdminClaimStatus = (claimNo: string, update: AdminClaimStatusUpdate) =>
+  sendJson<AdminClaim>(`/claims/${encodeURIComponent(claimNo)}/status`, 'PATCH', update, 'Unable to update the claim status.');

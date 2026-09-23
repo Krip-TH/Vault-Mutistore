@@ -202,7 +202,7 @@ export interface ProfileForm {
 
 // --- Admin ---
 
-export type AdminView = 'dashboard' | 'orders' | 'products' | 'users' | 'businesses';
+export type AdminView = 'dashboard' | 'orders' | 'products' | 'users' | 'businesses' | 'claims';
 
 export interface AdminOrderSummary {
   order_no: string;
@@ -377,4 +377,34 @@ export interface ClaimListPage {
   total: number;
   page: number;
   page_size: number;
+}
+
+export type ClaimNoteVisibility = 'customer' | 'internal';
+
+export interface AdminClaimSummary extends ClaimSummary {
+  customer_name: string;
+  customer_email: string;
+}
+
+export interface AdminClaimHistoryEntry extends ClaimHistoryEntry {
+  changed_by: number | null;
+  changed_by_name: string | null;
+  visibility: ClaimNoteVisibility;
+}
+
+export interface AdminClaim extends Omit<Claim, 'history'> {
+  customer_name: string;
+  customer_email: string;
+  customer_phone: string;
+  order_status: OrderStatus;
+  order_total: number;
+  order_created_at: string;
+  history: AdminClaimHistoryEntry[];
+}
+
+export interface AdminClaimStatusUpdate {
+  status: ClaimStatus;
+  note?: string;
+  note_visibility?: ClaimNoteVisibility;
+  admin_note?: string;
 }

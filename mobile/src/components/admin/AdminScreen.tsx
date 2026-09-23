@@ -7,6 +7,7 @@ import { colors, serif } from '../../theme';
 import type { AdminAnalytics, AdminOrder, AdminOrderSummary, AdminView } from '../../types';
 import AdminAnalyticsView from './AdminAnalyticsView';
 import AdminBusinessesView from './AdminBusinessesView';
+import AdminClaimsView from './AdminClaimsView';
 import AdminOrdersView from './AdminOrdersView';
 import AdminProductsView from './AdminProductsView';
 import AdminUsersView from './AdminUsersView';
@@ -19,6 +20,7 @@ interface Props {
 const tabs: Array<{ value: AdminView; label: string }> = [
   { value: 'dashboard', label: 'Dashboard' },
   { value: 'orders', label: 'Orders' },
+  { value: 'claims', label: 'Claims' },
   { value: 'products', label: 'Products' },
   { value: 'users', label: 'Users' },
   { value: 'businesses', label: 'Businesses' },
@@ -64,7 +66,9 @@ export default function AdminScreen({ visible, onClose }: Props) {
     }
   }
 
-  const titles: Record<AdminView, string> = { dashboard: 'Dashboard', orders: 'Orders', products: 'Products', users: 'Users', businesses: 'Businesses' };
+  const titles: Record<AdminView, string> = {
+    dashboard: 'Dashboard', orders: 'Orders', claims: 'Claims', products: 'Products', users: 'Users', businesses: 'Businesses',
+  };
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
@@ -117,6 +121,7 @@ export default function AdminScreen({ visible, onClose }: Props) {
               }}
             />
           )}
+          {!loading && !error && view === 'claims' && <AdminClaimsView />}
           {!loading && !error && view === 'products' && <AdminProductsView />}
           {!loading && !error && view === 'users' && <AdminUsersView />}
           {!loading && !error && view === 'businesses' && <AdminBusinessesView />}

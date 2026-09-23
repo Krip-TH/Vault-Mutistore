@@ -8,12 +8,16 @@ This is a pilot, not a port. It reuses the existing Express backend — extended
 replaced, see "Auth" below — and re-implements sign-in/register, product browsing and
 detail, cart, checkout, order history, the customer profile, the four AI features
 (search, chat, recommendations, descriptions), the admin dashboard (analytics, orders,
-product CRUD, user and business management), Best Sellers, and the customer side of the
-product-claims/warranty system.
+claims, product CRUD, user and business management), Best Sellers, and the full
+product-claims/warranty system (customer and admin).
 
-The `dev` branch has also grown a database-aware AI assistant (merged into this branch's
-history, see `backend/src/services/ai/databaseChatService.ts`), and the claims system has
-an admin side too; neither has a React Native screen yet — see "Effort estimate" below.
+The `dev` branch's database-aware AI assistant
+(`backend/src/services/ai/databaseChatService.ts`) needed no mobile changes at all: it
+replaced `POST /api/ai/chat`'s implementation in place, behind the exact same request and
+response shape (`{ messages } → { reply }`), so the existing chat widget picked it up for
+free the moment `dev` was merged into this branch. It can now also answer from the
+customer's live orders, profile, and claims — the same Bearer-token identity the chat
+widget already sends is all the backend's tools need.
 
 ## Auth
 
@@ -84,32 +88,34 @@ unrelated to this project. See the [Expo changelog](https://expo.dev/changelog/e
   photo via the device's photo library (`expo-image-picker`), matching the web's
   validation limits and field-by-field error copy (`src/profile.ts`).
 - AI natural-language search above the product grid, a floating shopping-assistant chat
-  widget (answers order questions when signed in, since the Bearer token is attached
-  when present), AI-picked related products on the detail screen, and an AI-generated
-  description when a product has none. All four fail silently and hide themselves if
-  `/api/ai/*` is ever unavailable — same rule as the web, no backend changes needed since
-  the Phase 1 Bearer-token support already covers these routes.
+  widget (database-aware since the `dev` merge: answers from the customer's live orders,
+  profile, and claims when signed in, since the Bearer token is attached when present),
+  AI-picked related products on the detail screen, and an AI-generated description when a
+  product has none. All four fail silently and hide themselves if `/api/ai/*` is ever
+  unavailable — same rule as the web, no backend changes needed since the Phase 1
+  Bearer-token support already covers these routes.
 - Pull to refresh, loading state, error state with retry, and empty state.
 - Admin dashboard, gated behind an "Admin" link shown only to signed-in admins
   (`user.role === 'admin'`): a KPI dashboard with revenue, order, customer and inventory
   charts (`react-native-chart-kit`) and the K-means product-segmentation summary; order
-  management with status updates; product CRUD, including image upload from the device's
-  photo library or an external URL, and read-only handling for externally managed
-  products; and user and business management, matching the web dashboard's rules (e.g. an
-  admin cannot delete their own account).
+  management with status updates; claims management (filter, open a claim, move it
+  through its status transitions with a customer-visible or internal note, view its
+  evidence and history); product CRUD, including image upload from the device's photo
+  library or an external URL, and read-only handling for externally managed products; and
+  user and business management, matching the web dashboard's rules (e.g. an admin cannot
+  delete their own account).
 - Best Sellers, behind a "Best Sellers" header link: products ranked by units sold from
   completed orders, paired with each product's live price and stock (`/api/products/best-sellers`),
   reusing `ProductCard` and opening straight into the same product detail view as the
   main collection.
-- Product claims/warranty (customer side), behind a "Submit a claim" button on any
-  shipped or delivered order and a "Claims" header link: pick the affected products and
-  quantities, choose a reason, describe the problem, and attach up to 5 evidence photos
-  (`expo-image-picker`, uploaded as multipart form data); My Claims lists every claim
-  with a status filter, and its detail view shows the claimed products, a progress
-  timeline built from the claim's history, the evidence gallery (loaded through an
-  authenticated request, since evidence is private — see `src/claimApi.ts`), and a cancel
-  action while the claim is still early enough to cancel. Ported from
-  `frontend/src/components/ClaimForm.tsx` and `MyClaims.tsx`.
+- Product claims/warranty, customer side: a "Submit a claim" button on any shipped or
+  delivered order and a "Claims" header link. The form picks the affected products and
+  quantities, a reason, a description, and up to 5 evidence photos (`expo-image-picker`,
+  uploaded as multipart form data); My Claims lists every claim with a status filter, and
+  its detail view shows the claimed products, a progress timeline built from the claim's
+  history, the evidence gallery (loaded through an authenticated request, since evidence
+  is private — see `src/claimApi.ts`), and a cancel action while the claim is still early
+  enough to cancel. Ported from `frontend/src/components/ClaimForm.tsx` and `MyClaims.tsx`.
 
 ## What matched the web, and what could not
 
@@ -143,13 +149,7 @@ markup or CSS with the web. What's still missing to cover the rest of the web ap
   the web's `WarrantyDocument` and `ClaimPrintDocument`) was skipped — printing to PDF
   is not a mobile pattern, and the mobile claim form already shows eligibility and the
   claimable items directly, so nothing is lost for the customer, only the standalone
-  printable view,
-- the admin side of claims (`backend/src/controllers/adminClaimController.ts`, the web's
-  `AdminClaims.tsx`) has no mobile screen yet — it would slot into the existing
-  `AdminScreen` tab pattern (`src/components/admin/`) alongside Orders and Products,
-- the database-aware AI assistant (`backend/src/services/ai/databaseChatService.ts`) is
-  not wired into `AiChatWidget.tsx` — it would need its own request path alongside the
-  existing `/api/ai/chat`.
+  printable view.
 
 Already done, for reference: auth works with a Bearer token instead of the cookie
 (`backend/src/middleware/auth.ts` accepts either), the cart uses `AsyncStorage` in place
