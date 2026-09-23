@@ -6,6 +6,6 @@
  * Find it on Windows with `ipconfig` (IPv4 Address of the Wi-Fi adapter),
  * or on macOS/Linux with `ifconfig`.
  */
-export const API_BASE_URL = 'http://192.168.1.50:3000';
+export const API_BASE_URL = 'http://192.168.31.67:3000';
 
 export const REQUEST_TIMEOUT_MS = 15_000;
