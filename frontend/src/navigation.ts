@@ -4,8 +4,10 @@ import type { AppRoute } from './auth/routes';
 export const customerNavigation: ReadonlyArray<{ label: string; route: AppRoute }> = [
   { label: 'Home', route: 'home' },
   { label: 'Shop', route: 'products' },
+  { label: 'Best Sellers', route: 'best-sellers' },
   { label: 'Cart', route: 'cart' },
   { label: 'My Orders', route: 'orders' },
+  { label: 'My Claims', route: 'claims' },
   { label: 'Profile', route: 'profile' },
 ];
 
@@ -13,6 +15,7 @@ export const adminNavigation: ReadonlyArray<{ label: string; view: AdminView }> 
   { label: 'Dashboard', view: 'dashboard' },
   { label: 'Products', view: 'products' },
   { label: 'Orders', view: 'orders' },
+  { label: 'Claims', view: 'claims' },
   { label: 'Users', view: 'users' },
   { label: 'Businesses', view: 'businesses' },
 ];

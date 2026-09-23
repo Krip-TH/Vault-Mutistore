@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import { ApiError } from '../errors/apiError.js';
-import { chatWithAssistant } from '../services/ai/chatService.js';
+import { chatWithDatabaseAssistant } from '../services/ai/databaseChatService.js';
 import { describeProduct } from '../services/ai/describeService.js';
 import { recommendProducts } from '../services/ai/recommendService.js';
 import { searchProducts } from '../services/ai/searchService.js';
@@ -18,7 +18,7 @@ export async function postChat(request: Request, response: Response): Promise<vo
   try {
     // The signed-in user id comes only from the verified session cookie — never from the request body.
     const userId = request.auth ? request.auth.userId : null;
-    const result = await chatWithAssistant(request.body, userId);
+    const result = await chatWithDatabaseAssistant(request.body, userId);
     response.json(result);
   } catch (error) {
     sendAiError(response, error);
