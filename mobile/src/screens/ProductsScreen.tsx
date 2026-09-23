@@ -20,6 +20,8 @@ import CartModal from '../components/CartModal';
 import CheckoutModal from '../components/CheckoutModal';
 import ClaimFormModal from '../components/ClaimFormModal';
 import MyClaimsModal from '../components/MyClaimsModal';
+import NavigationDrawer from '../components/NavigationDrawer';
+import type { NavigationTarget } from '../components/NavigationDrawer';
 import OrdersModal from '../components/OrdersModal';
 import ProductCard from '../components/ProductCard';
 import ProductDetailModal from '../components/ProductDetailModal';
@@ -59,6 +61,15 @@ export default function ProductsScreen() {
   const [claimOrderNo, setClaimOrderNo] = useState<string | null>(null);
   const [myClaimsOpen, setMyClaimsOpen] = useState(false);
   const [myClaimsInitialNumber, setMyClaimsInitialNumber] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  function navigateTo(target: NavigationTarget) {
+    if (target === 'bestSellers') setBestSellersOpen(true);
+    else if (target === 'orders') setOrdersOpen(true);
+    else if (target === 'claims') { setMyClaimsInitialNumber(null); setMyClaimsOpen(true); }
+    else if (target === 'profile') setProfileOpen(true);
+    else if (target === 'admin') setAdminOpen(true);
+  }
 
   const load = useCallback(async () => {
     setError(null);
@@ -157,26 +168,15 @@ export default function ProductsScreen() {
     <View style={[styles.screen, { paddingTop: insets.top }]}>
       <View style={styles.headerBar}>
         <View style={styles.brandGroup}>
+          <Pressable onPress={() => setMenuOpen(true)} hitSlop={8} accessibilityLabel="Open navigation" accessibilityRole="button">
+            <Text style={styles.hamburger}>☰</Text>
+          </Pressable>
           <View style={styles.brandMark}>
             <Text style={styles.brandMarkText}>V.</Text>
           </View>
           <Text style={styles.brandName}>VAULT</Text>
         </View>
         <View style={styles.accountGroup}>
-          {user?.role === 'admin' && (
-            <Pressable onPress={() => setAdminOpen(true)} hitSlop={8}>
-              <Text style={styles.adminLinkText}>Admin</Text>
-            </Pressable>
-          )}
-          <Pressable onPress={() => setBestSellersOpen(true)} hitSlop={8}>
-            <Text style={styles.linkText}>Best Sellers</Text>
-          </Pressable>
-          <Pressable onPress={() => setOrdersOpen(true)} hitSlop={8}>
-            <Text style={styles.linkText}>Orders</Text>
-          </Pressable>
-          <Pressable onPress={() => { setMyClaimsInitialNumber(null); setMyClaimsOpen(true); }} hitSlop={8}>
-            <Text style={styles.linkText}>Claims</Text>
-          </Pressable>
           <Pressable
             onPress={() => setCartOpen(true)}
             hitSlop={8}
@@ -268,6 +268,12 @@ export default function ProductsScreen() {
         onClose={() => setMyClaimsOpen(false)}
       />
       {user?.role === 'admin' && <AdminScreen visible={adminOpen} onClose={() => setAdminOpen(false)} />}
+      <NavigationDrawer
+        visible={menuOpen}
+        isAdmin={user?.role === 'admin'}
+        onClose={() => setMenuOpen(false)}
+        onNavigate={navigateTo}
+      />
     </View>
   );
 }
@@ -287,9 +293,8 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.headerBorder,
   },
   brandGroup: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  accountGroup: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-end', gap: 10, flexShrink: 1 },
-  linkText: { fontSize: 11, color: colors.text, fontWeight: '600' },
-  adminLinkText: { fontSize: 11, color: '#8f6846', fontWeight: '700' },
+  hamburger: { fontSize: 20, color: colors.text },
+  accountGroup: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   cartText: { fontSize: 11, color: colors.text, fontWeight: '600' },
   profileDot: { width: 26, height: 26, borderRadius: 13, backgroundColor: colors.darkGreen, alignItems: 'center', justifyContent: 'center' },
   profileDotText: { fontSize: 11, color: '#fff', fontWeight: '600' },

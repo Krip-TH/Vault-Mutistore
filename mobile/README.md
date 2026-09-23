@@ -70,6 +70,12 @@ unrelated to this project. See the [Expo changelog](https://expo.dev/changelog/e
 - Sign in and create an account, matching the web's validation (name required to
   register, a valid email, an 8+ character password) and error copy. The session
   persists across app restarts.
+- A hamburger navigation drawer (`src/components/NavigationDrawer.tsx`), ported from the
+  web's `NavigationDrawer.tsx`: a "☰" button next to the brand mark opens a sheet listing
+  Best Sellers, My Orders, My Claims, Profile, and Admin (only for `user.role === 'admin'`),
+  with the signed-in customer's name, email, and a log out button in the footer. Cart and
+  Profile stay as quick-access icons in the header itself, since they're the two most
+  frequent actions — the same split the web uses between its drawer and its account menu.
 - Product collection screen: brand header, section heading, business filter chips,
   two-column product grid, results count, and the partial-inventory notice.
 - Product card: image with fallback tile, business pill, category, name, THB price,
