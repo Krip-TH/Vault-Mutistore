@@ -157,7 +157,7 @@ function AdminOrderDetail({ order, onBack, onUpdated }: { order: AdminOrder; onB
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Shipping address</Text>
-        {address.map(part => <Text key={part} style={styles.orderRowSmall}>{part}</Text>)}
+        {address.map((part, index) => <Text key={index} style={styles.orderRowSmall}>{part}</Text>)}
       </View>
 
       <View style={styles.card}>

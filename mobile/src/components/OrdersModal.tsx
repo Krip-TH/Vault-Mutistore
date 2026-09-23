@@ -236,7 +236,7 @@ function OrderDetail({ orderNo, order, loading, error, onRetry, onSubmitClaim, i
       <Text style={styles.stateBody}>{order.customer.phone}</Text>
 
       <Text style={styles.sectionTitle}>Shipping address</Text>
-      {address.map(part => <Text key={part} style={styles.stateBody}>{part}</Text>)}
+      {address.map((part, index) => <Text key={index} style={styles.stateBody}>{part}</Text>)}
 
       <View style={styles.totals}>
         <View style={styles.totalRow}><Text style={styles.orderRowSmall}>Subtotal</Text><Text style={styles.orderRowSmall}>{formatTHB(order.subtotal)}</Text></View>

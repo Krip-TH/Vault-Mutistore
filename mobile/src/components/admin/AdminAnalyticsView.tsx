@@ -67,7 +67,7 @@ export default function AdminAnalyticsView({ data, onOpenOrder }: { data: AdminA
       {data.warnings.length > 0 && (
         <View style={styles.warning}>
           <Text style={styles.warningTitle}>Partial inventory data</Text>
-          {data.warnings.map(warning => <Text key={warning} style={styles.warningBody}>{warning}</Text>)}
+          {data.warnings.map((warning, index) => <Text key={index} style={styles.warningBody}>{warning}</Text>)}
         </View>
       )}
 
@@ -202,7 +202,7 @@ export default function AdminAnalyticsView({ data, onOpenOrder }: { data: AdminA
       <View style={styles.card}>
         <Text style={styles.eyebrow}>DECISION SUPPORT</Text>
         <Text style={styles.cardTitle}>Business insights</Text>
-        {data.insights.map(insight => <Text key={insight} style={styles.insightItem}>• {insight}</Text>)}
+        {data.insights.map((insight, index) => <Text key={index} style={styles.insightItem}>• {insight}</Text>)}
       </View>
 
       <View style={styles.card}>
