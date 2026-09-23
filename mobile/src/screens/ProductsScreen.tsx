@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Image,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -171,9 +172,7 @@ export default function ProductsScreen() {
           <Pressable onPress={() => setMenuOpen(true)} hitSlop={8} accessibilityLabel="Open navigation" accessibilityRole="button">
             <Text style={styles.hamburger}>☰</Text>
           </Pressable>
-          <View style={styles.brandMark}>
-            <Text style={styles.brandMarkText}>V.</Text>
-          </View>
+          <Image source={require('../../assets/vault-logo.png')} style={styles.brandMark} resizeMode="contain" accessibilityLabel="VAULT" />
           <Text style={styles.brandName}>VAULT</Text>
         </View>
         <View style={styles.accountGroup}>
@@ -298,15 +297,7 @@ const styles = StyleSheet.create({
   cartText: { fontSize: 11, color: colors.text, fontWeight: '600' },
   profileDot: { width: 26, height: 26, borderRadius: 13, backgroundColor: colors.darkGreen, alignItems: 'center', justifyContent: 'center' },
   profileDotText: { fontSize: 11, color: '#fff', fontWeight: '600' },
-  brandMark: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: colors.darkGreen,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  brandMarkText: { fontFamily: serif, fontSize: 21, color: '#fff' },
+  brandMark: { width: 34, height: 34 },
   brandName: { fontFamily: serif, fontSize: 21, color: colors.text },
   listContent: { paddingHorizontal: 22, paddingTop: 24 },
   column: { gap: 14, marginBottom: 14 },

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../auth/AuthContext';
 import { colors, serif } from '../theme';
@@ -51,7 +51,7 @@ export default function NavigationDrawer({ visible, isAdmin, onClose, onNavigate
       <View style={[styles.sheet, { paddingTop: insets.top ? 0 : 12 }]}>
         <View style={styles.header}>
           <View style={styles.brandGroup}>
-            <View style={styles.brandMark}><Text style={styles.brandMarkText}>V.</Text></View>
+            <Image source={require('../../assets/vault-logo.png')} style={styles.brandMark} resizeMode="contain" accessibilityLabel="VAULT" />
             <Text style={styles.brandName}>VAULT</Text>
           </View>
           <Pressable onPress={onClose} accessibilityLabel="Close navigation" hitSlop={8}>
@@ -85,8 +85,7 @@ const styles = StyleSheet.create({
   sheet: { flex: 1, backgroundColor: colors.background },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 22, paddingVertical: 16 },
   brandGroup: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  brandMark: { width: 34, height: 34, borderRadius: 17, backgroundColor: colors.darkGreen, alignItems: 'center', justifyContent: 'center' },
-  brandMarkText: { fontFamily: serif, fontSize: 18, color: '#fff' },
+  brandMark: { width: 30, height: 30 },
   brandName: { fontFamily: serif, fontSize: 18, color: colors.text },
   close: { fontSize: 24, color: colors.text, lineHeight: 26 },
   links: { paddingHorizontal: 22, paddingTop: 10 },
