@@ -15,6 +15,7 @@ import { useAuth } from '../auth/AuthContext';
 import { useCart } from '../cart/CartContext';
 import AiSearchBar from '../components/AiSearchBar';
 import AdminScreen from '../components/admin/AdminScreen';
+import BestSellersModal from '../components/BestSellersModal';
 import CartModal from '../components/CartModal';
 import CheckoutModal from '../components/CheckoutModal';
 import OrdersModal from '../components/OrdersModal';
@@ -52,6 +53,7 @@ export default function ProductsScreen() {
   const [ordersOpen, setOrdersOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
+  const [bestSellersOpen, setBestSellersOpen] = useState(false);
 
   const load = useCallback(async () => {
     setError(null);
@@ -161,6 +163,9 @@ export default function ProductsScreen() {
               <Text style={styles.adminLinkText}>Admin</Text>
             </Pressable>
           )}
+          <Pressable onPress={() => setBestSellersOpen(true)} hitSlop={8}>
+            <Text style={styles.linkText}>Best Sellers</Text>
+          </Pressable>
           <Pressable onPress={() => setOrdersOpen(true)} hitSlop={8}>
             <Text style={styles.linkText}>Orders</Text>
           </Pressable>
@@ -229,6 +234,11 @@ export default function ProductsScreen() {
       />
       <OrdersModal visible={ordersOpen} onClose={() => setOrdersOpen(false)} />
       <ProfileModal visible={profileOpen} onClose={() => setProfileOpen(false)} />
+      <BestSellersModal
+        visible={bestSellersOpen}
+        onClose={() => setBestSellersOpen(false)}
+        onSelectProduct={product => { setBestSellersOpen(false); setSelected(product); }}
+      />
       {user?.role === 'admin' && <AdminScreen visible={adminOpen} onClose={() => setAdminOpen(false)} />}
     </View>
   );

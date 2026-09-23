@@ -1,6 +1,9 @@
 import { getStoredToken } from './auth/AuthContext';
 import { API_BASE_URL, REQUEST_TIMEOUT_MS } from './config';
-import type { ApiErrorResponse, BusinessAvailability, CreateOrderRequest, Order, OrderSummary, Product, ProductsResponse } from './types';
+import type {
+  ApiErrorResponse, BestSeller, BestSellersResponse, BusinessAvailability, CreateOrderRequest,
+  Order, OrderSummary, Product, ProductsResponse,
+} from './types';
 
 export interface ProductsResult {
   products: Product[];
@@ -26,6 +29,17 @@ export async function fetchProducts(): Promise<ProductsResult> {
     products: payload.data,
     businesses: Array.isArray(payload.businesses) ? payload.businesses : [],
   };
+}
+
+export async function fetchBestSellers(limit = 10): Promise<BestSeller[]> {
+  const response = await fetch(`${API_BASE_URL}/api/products/best-sellers?limit=${encodeURIComponent(limit)}`, {
+    headers: { Accept: 'application/json' },
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  });
+  if (!response.ok) throw new Error(await errorMessage(response, 'Unable to load best sellers right now.'));
+  const payload = (await response.json()) as BestSellersResponse;
+  if (!Array.isArray(payload.data)) throw new Error('The best sellers response was invalid.');
+  return payload.data;
 }
 
 export async function errorMessage(response: Response, fallback: string): Promise<string> {

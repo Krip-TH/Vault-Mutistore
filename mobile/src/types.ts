@@ -35,6 +35,17 @@ export interface ProductsResponse {
   businesses?: BusinessAvailability[];
 }
 
+export interface BestSeller {
+  rank: number;
+  units_sold: number;
+  product: Product;
+}
+
+export interface BestSellersResponse {
+  data: BestSeller[];
+  source: 'completed_orders';
+}
+
 export type UserRole = 'customer' | 'admin';
 
 export interface User {

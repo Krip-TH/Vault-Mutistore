@@ -7,8 +7,13 @@ mobile app: **how closely can React Native match the existing web UI, and what d
 This is a pilot, not a port. It reuses the existing Express backend — extended, not
 replaced, see "Auth" below — and re-implements sign-in/register, product browsing and
 detail, cart, checkout, order history, the customer profile, the four AI features
-(search, chat, recommendations, descriptions), and the admin dashboard (analytics,
-orders, product CRUD, user and business management).
+(search, chat, recommendations, descriptions), the admin dashboard (analytics, orders,
+product CRUD, user and business management), and Best Sellers.
+
+The `dev` branch has since grown a product-claims/warranty system and a database-aware
+AI assistant (merged into this branch's history, see `backend/src/services/claimService.ts`
+and `backend/src/services/ai/databaseChatService.ts`); neither has a React Native screen
+yet — see "Effort estimate" below.
 
 ## Auth
 
@@ -92,6 +97,10 @@ unrelated to this project. See the [Expo changelog](https://expo.dev/changelog/e
   photo library or an external URL, and read-only handling for externally managed
   products; and user and business management, matching the web dashboard's rules (e.g. an
   admin cannot delete their own account).
+- Best Sellers, behind a "Best Sellers" header link: products ranked by units sold from
+  completed orders, paired with each product's live price and stock (`/api/products/best-sellers`),
+  reusing `ProductCard` and opening straight into the same product detail view as the
+  main collection.
 
 ## What matched the web, and what could not
 
@@ -120,7 +129,15 @@ markup or CSS with the web. What's still missing to cover the rest of the web ap
 - the hash-based router (`window.location.hash`) is not used here — every screen is
   reached through modals and local state instead of React Navigation, which is what a
   full app with more than a handful of screens would need,
-- favourites (the web's "save for later") are not built.
+- favourites (the web's "save for later") are not built,
+- the product-claims/warranty system (`backend/src/services/claimService.ts`,
+  `backend/src/controllers/claimController.ts` and `adminClaimController.ts`) has no
+  mobile screens yet — customer claim submission with evidence photos, claim status
+  tracking, and the admin claims queue would each need a React Native equivalent of the
+  web's `ClaimForm`, `MyClaims` and `AdminClaims`,
+- the database-aware AI assistant (`backend/src/services/ai/databaseChatService.ts`) is
+  not wired into `AiChatWidget.tsx` — it would need its own request path alongside the
+  existing `/api/ai/chat`.
 
 Already done, for reference: auth works with a Bearer token instead of the cookie
 (`backend/src/middleware/auth.ts` accepts either), the cart uses `AsyncStorage` in place
