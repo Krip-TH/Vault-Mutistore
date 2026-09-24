@@ -1,0 +1,73 @@
+import { errorMessage } from './api';
+import { getStoredToken } from './auth/AuthContext';
+import { API_BASE_URL } from './config';
+import { apiFetch, RequestTimeoutError } from './http';
+import type { ChatMessage, ChatResponse, DescribeResponse, RecommendResponse, SearchResponse } from './types';
+
+/**
+ * Chat should answer order questions when signed in but must also work for guests, so the
+ * token is attached only if one exists — unlike orders/profile, which require it outright.
+ */
+async function optionalAuthHeaders(): Promise<Record<string, string>> {
+  const token = await getStoredToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+export async function searchProductsWithAi(query: string): Promise<SearchResponse> {
+  const response = await apiFetch(`${API_BASE_URL}/api/ai/search`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ query }),
+  });
+  if (!response.ok) throw new Error(await errorMessage(response, 'AI search is unavailable right now.'));
+  return response.json() as Promise<SearchResponse>;
+}
+
+export async function sendChatMessage(messages: ChatMessage[]): Promise<ChatResponse> {
+  try {
+    const response = await apiFetch(`${API_BASE_URL}/api/ai/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json', ...(await optionalAuthHeaders()) },
+      body: JSON.stringify({ messages }),
+    });
+    if (!response.ok) {
+      if ([502, 503, 504].includes(response.status)) {
+        throw new AiChatExpectedError('ขออภัย ผู้ช่วย AI ไม่พร้อมใช้งานชั่วคราว กรุณาลองใหม่อีกครั้งค่ะ');
+      }
+      throw new Error(await errorMessage(response, 'The chat assistant is unavailable right now.'));
+    }
+    return response.json() as Promise<ChatResponse>;
+  } catch (error) {
+    if (error instanceof AiChatExpectedError) throw error;
+    if (error instanceof RequestTimeoutError) {
+      throw new AiChatExpectedError('ผู้ช่วย AI ใช้เวลาตอบนานเกินไป กรุณาลองอีกครั้งค่ะ');
+    }
+    throw error;
+  }
+}
+
+export class AiChatExpectedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'AiChatExpectedError';
+  }
+}
+
+export async function fetchAiDescription(productId: string, business: string): Promise<DescribeResponse> {
+  const response = await apiFetch(`${API_BASE_URL}/api/ai/describe`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ productId, business }),
+  });
+  if (!response.ok) throw new Error(await errorMessage(response, 'AI description is unavailable right now.'));
+  return response.json() as Promise<DescribeResponse>;
+}
+
+export async function fetchRecommendations(productId: string, business: string): Promise<RecommendResponse> {
+  const url = `${API_BASE_URL}/api/ai/recommend/${encodeURIComponent(productId)}?business=${encodeURIComponent(business)}`;
+  const response = await apiFetch(url, {
+    headers: { Accept: 'application/json' },
+  });
+  if (!response.ok) throw new Error(await errorMessage(response, 'Recommendations are unavailable right now.'));
+  return response.json() as Promise<RecommendResponse>;
+}

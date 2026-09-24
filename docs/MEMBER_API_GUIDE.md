@@ -18,7 +18,7 @@ Use the branch assigned to your business:
 ## Integration steps
 
 1. Clone the repository if you do not already have it.
-2. Switch to `main` and pull the latest changes.
+2. Switch to `dev` and pull the latest changes.
 3. Create your assigned feature branch.
 4. Copy `.env.example` to `.env`.
 5. Add your business API URL to the matching variable in `.env`.
@@ -26,17 +26,17 @@ Use the branch assigned to your business:
 7. Test that your adapter returns the normalized format in [API_CONTRACT.md](API_CONTRACT.md).
 8. Commit your changes with a clear message.
 9. Push your feature branch.
-10. Open a Pull Request into `main`.
+10. Open a Pull Request into `dev`.
 11. Wait for review from `@Krip-TH`.
-12. Do not push directly to `main`.
+12. Do not push directly to `dev` or `main`.
 
 Example for the Clothing member:
 
 ```bash
 git clone <repository-url>
-cd Moodeng-MultiStore
-git checkout main
-git pull origin main
+cd VAULT
+git checkout dev
+git pull origin dev
 git checkout -b feature/clothing-api
 cp .env.example .env
 
@@ -70,7 +70,7 @@ Copy-Item .env.example .env
 **DO NOT run:**
 
 ```bash
-git push origin main
+git push origin dev
 ```
 
-Push only your feature branch and let `@Krip-TH` review the Pull Request before it is merged.
+Push only your feature branch and let `@Krip-TH` review the Pull Request before it is merged into `dev`. Promote integrated `dev` to `main` only after final validation.

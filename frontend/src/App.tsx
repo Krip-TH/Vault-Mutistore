@@ -1,5 +1,81 @@
-import { useEffect, useMemo, useState } from 'react';
-import type { BusinessType, Product, ProductsResponse, StockStatus } from './types/product';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { BusinessAvailability, BusinessType, Product, ProductsResponse, StockStatus } from './types/product';
+import { ProductCard, ProductImage } from './components/ProductPresentation';
+import ProductDetail from './components/ProductDetail';
+import AiSearchBar from './components/AiSearchBar';
+import AiChatWidget from './components/AiChatWidget';
+import CartDrawer from './components/CartDrawer';
+import Checkout from './components/Checkout';
+import OrderHistory from './components/OrderHistory';
+import MyClaims from './components/MyClaims';
+import AccountMenu from './components/AccountMenu';
+import AuthPage from './components/AuthPage';
+import AdminDashboard from './components/AdminDashboard';
+import { useAuth } from './auth/AuthContext';
+import { parseRoute, resolveProtectedRoute, routeAfterAuthentication, routeAfterLogout, routeHash } from './auth/routes';
+import type { AppRoute } from './auth/routes';
+import { customerNavigation, isRouteActive } from './navigation';
+import { useCart } from './cart/CartContext';
+import { textValue } from './utils/product';
+import type { AdminView } from './types/admin';
+import CustomerProfile from './components/CustomerProfile';
+import { HamburgerButton, NavigationDrawer } from './components/NavigationDrawer';
+import BestSellersPage from './components/BestSellersPage';
+
+const adminViewByRoute: Partial<Record<AppRoute, AdminView>> = {
+  admin: 'dashboard', 'admin-products': 'products', 'admin-orders': 'orders', 'admin-claims': 'claims',
+  'admin-users': 'users', 'admin-businesses': 'businesses',
+};
+const adminRouteByView: Record<AdminView, AppRoute> = {
+  dashboard: 'admin', products: 'admin-products', orders: 'admin-orders', claims: 'admin-claims',
+  users: 'admin-users', businesses: 'admin-businesses',
+};
+
+function App() {
+  const auth = useAuth();
+  const [requestedRoute, setRequestedRoute] = useState<AppRoute>(() => parseRoute(window.location.hash));
+  const navigate = useCallback((route: AppRoute, replace = false) => {
+    const hash = routeHash(route);
+    if (replace) window.history.replaceState(null, '', hash);
+    else window.history.pushState(null, '', hash);
+    setRequestedRoute(route);
+  }, []);
+
+  useEffect(() => {
+    const onHashChange = () => setRequestedRoute(parseRoute(window.location.hash));
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
+
+  const route = resolveProtectedRoute(requestedRoute, auth.user);
+  useEffect(() => {
+    if (!auth.loading && route !== requestedRoute) navigate(route, true);
+  }, [auth.loading, navigate, requestedRoute, route]);
+
+  if (auth.loading) {
+    return <main className="auth-loading" aria-busy="true"><span>V.</span><p>Opening VAULT…</p></main>;
+  }
+  if (!auth.user) {
+    const isAdminLogin = route === 'admin-login';
+    return <AuthPage view={route === 'register' ? 'register' : 'login'} mode={isAdminLogin ? 'admin' : 'customer'}
+      onViewChange={view => navigate(view)}
+      onAdminLogin={() => navigate('admin-login')}
+      onCustomerLogin={() => navigate('login')}
+      onAuthenticated={user => navigate(isAdminLogin ? 'admin' : routeAfterAuthentication(user), true)} />;
+  }
+  const adminView = adminViewByRoute[route];
+  if (adminView) {
+    return <AdminDashboard view={adminView}
+      onViewChange={next => navigate(adminRouteByView[next])}
+      onClose={() => navigate('home')}
+      onLogout={async () => {
+        const destination = routeAfterLogout(auth.user!);
+        await auth.logout();
+        navigate(destination, true);
+      }} />;
+  }
+  return <Storefront route={route} navigate={navigate} />;
+}
 
 const businessOptions: Array<{ value: BusinessType; label: string }> = [
   { value: 'door', label: 'Door' },
@@ -12,100 +88,27 @@ const businessOptions: Array<{ value: BusinessType; label: string }> = [
 
 const stockStatuses: StockStatus[] = ['In Stock', 'Low Stock', 'Out of Stock'];
 
-const fallbackImage =
-  'data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22640%22 height=%22400%22 viewBox=%220 0 640 400%22%3E%3Crect width=%22640%22 height=%22400%22 fill=%22%231e293b%22/%3E%3Cpath d=%22M230 286l73-80 47 47 34-35 76 68H230z%22 fill=%22%23475569%22/%3E%3Ccircle cx=%22274%22 cy=%22149%22 r=%2229%22 fill=%22%2364758b%22/%3E%3Ctext x=%22320%22 y=%22342%22 text-anchor=%22middle%22 font-family=%22Arial,sans-serif%22 font-size=%2224%22 fill=%22%2394a3b8%22%3EImage unavailable%3C/text%3E%3C/svg%3E';
-
-const priceFormatter = new Intl.NumberFormat('th-TH', {
-  style: 'currency',
-  currency: 'THB',
-  maximumFractionDigits: 2,
-});
-
-const statusStyles: Record<StockStatus, string> = {
-  'In Stock': 'border-emerald-400/30 bg-emerald-400/10 text-emerald-300',
-  'Low Stock': 'border-amber-400/30 bg-amber-400/10 text-amber-300',
-  'Out of Stock': 'border-rose-400/30 bg-rose-400/10 text-rose-300',
-};
-
-function formatUpdatedAt(value: string): string {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return 'Update unavailable';
-  }
-
-  return `Updated ${new Intl.DateTimeFormat('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  }).format(date)}`;
+type FavoriteState = { favorites: string[] };
+const productKey = (product: Product) => JSON.stringify([product.business, product.id]);
+function readFavorites(): FavoriteState {
+  try {
+    const value = JSON.parse(sessionStorage.getItem('moodeng-shopping') || '{}');
+    return {
+      favorites: Array.isArray(value.favorites) ? value.favorites.filter((key: unknown) => typeof key === 'string') : [],
+    };
+  } catch { return { favorites: [] }; }
 }
 
-function ProductCard({ product }: { product: Product }) {
-  return (
-    <article className="group flex h-full flex-col overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 shadow-lg shadow-slate-950/20 transition duration-200 hover:-translate-y-1 hover:border-cyan-500/40">
-      <div className="aspect-[16/10] overflow-hidden bg-slate-800">
-        <img
-          className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
-          src={product.image_url || fallbackImage}
-          alt={product.name}
-          loading="lazy"
-          onError={(event) => {
-            event.currentTarget.src = fallbackImage;
-          }}
-        />
-      </div>
 
-      <div className="flex flex-1 flex-col p-5">
-        <div className="mb-3 flex items-start justify-between gap-3">
-          <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-2.5 py-1 text-xs font-semibold text-cyan-300">
-            {product.business_name}
-          </span>
-          <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${statusStyles[product.status]}`}>
-            {product.status}
-          </span>
-        </div>
-
-        <h3 className="product-title text-lg font-semibold leading-6 text-white" title={product.name}>
-          {product.name}
-        </h3>
-        <p className="mt-2 text-sm text-slate-400">{product.category}</p>
-
-        <div className="mt-auto pt-5">
-          <p className="text-xl font-bold text-cyan-300">{priceFormatter.format(product.price)}</p>
-          <div className="mt-3 flex items-center justify-between gap-3 border-t border-slate-800 pt-3 text-sm">
-            <span className="text-slate-400">Stock</span>
-            <span className="font-semibold text-slate-200">
-              {product.stock.toLocaleString()} {product.unit}
-            </span>
-          </div>
-          <p className="mt-3 text-xs text-slate-500">{formatUpdatedAt(product.updated_at)}</p>
-        </div>
-      </div>
-    </article>
-  );
-}
-
-function LoadingCards() {
-  return (
-    <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3" aria-label="Loading products">
-      {Array.from({ length: 6 }, (_, index) => (
-        <div key={index} className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900">
-          <div className="aspect-[16/10] animate-pulse bg-slate-800" />
-          <div className="space-y-4 p-5">
-            <div className="h-5 w-24 animate-pulse rounded bg-slate-800" />
-            <div className="h-6 w-4/5 animate-pulse rounded bg-slate-800" />
-            <div className="h-4 w-2/5 animate-pulse rounded bg-slate-800" />
-            <div className="h-7 w-1/3 animate-pulse rounded bg-slate-800" />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function App() {
+function Storefront({ route, navigate }: { route: AppRoute; navigate: (route: AppRoute, replace?: boolean) => void }) {
+  const cart = useCart();
+  const auth = useAuth();
+  const [favorites, setFavorites] = useState<FavoriteState>(readFavorites);
+  useEffect(() => {
+    try { sessionStorage.setItem('moodeng-shopping', JSON.stringify(favorites)); } catch { /* Favorites remain usable in memory. */ }
+  }, [favorites]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [availability, setAvailability] = useState<BusinessAvailability[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [requestVersion, setRequestVersion] = useState(0);
@@ -113,6 +116,15 @@ function App() {
   const [business, setBusiness] = useState<BusinessType | 'all'>('all');
   const [category, setCategory] = useState('all');
   const [stockStatus, setStockStatus] = useState<StockStatus | 'all'>('all');
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [selectedOrderNo, setSelectedOrderNo] = useState<string | undefined>();
+  const [selectedClaimNumber, setSelectedClaimNumber] = useState<string | undefined>();
+  const [navigationOpen, setNavigationOpen] = useState(false);
+  const [navigationLogoutError, setNavigationLogoutError] = useState('');
+  const closeNavigation = useCallback(() => setNavigationOpen(false), []);
+  const ordersOpen = route === 'orders';
+  const claimsOpen = route === 'claims';
+  const logoutDestination = auth.user ? routeAfterLogout(auth.user) : 'login';
 
   useEffect(() => {
     const controller = new AbortController();
@@ -138,12 +150,14 @@ function App() {
         }
 
         setProducts(payload.data);
+        setAvailability(Array.isArray(payload.businesses) ? payload.businesses : []);
       } catch (requestError) {
         if (requestError instanceof DOMException && requestError.name === 'AbortError') {
           return;
         }
 
         setProducts([]);
+        setAvailability([]);
         setError(requestError instanceof Error ? requestError.message : 'Unable to load products.');
       } finally {
         if (!controller.signal.aborted) {
@@ -156,9 +170,24 @@ function App() {
 
     return () => controller.abort();
   }, [requestVersion]);
+  useEffect(() => {
+    if (!loading && !error) cart.syncProducts(products);
+  }, [cart.syncProducts, error, loading, products]);
+  useEffect(() => {
+    if (!auth.loading && !auth.user) {
+      setCheckoutOpen(false);
+      setSelectedOrderNo(undefined);
+      setSelectedClaimNumber(undefined);
+    }
+  }, [auth.loading, auth.user]);
+  useEffect(() => {
+    if (route === 'cart') cart.openCart();
+    if (route === 'products') requestAnimationFrame(() => document.querySelector('#explore')?.scrollIntoView());
+    if (route === 'home') window.scrollTo({ top: 0 });
+  }, [cart.openCart, route]);
 
   const categories = useMemo(
-    () => [...new Set(products.map((product) => product.category).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
+    () => [...new Set(products.map((product) => textValue(product.category)).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
     [products],
   );
 
@@ -166,9 +195,9 @@ function App() {
     const normalizedSearch = search.trim().toLocaleLowerCase();
 
     return products.filter((product) => {
-      const matchesSearch = !normalizedSearch || product.name.toLocaleLowerCase().includes(normalizedSearch);
+      const matchesSearch = !normalizedSearch || textValue(product.name).toLocaleLowerCase().includes(normalizedSearch);
       const matchesBusiness = business === 'all' || product.business === business;
-      const matchesCategory = category === 'all' || product.category === category;
+      const matchesCategory = category === 'all' || textValue(product.category) === category;
       const matchesStock = stockStatus === 'all' || product.status === stockStatus;
 
       return matchesSearch && matchesBusiness && matchesCategory && matchesStock;
@@ -195,151 +224,88 @@ function App() {
     setStockStatus('all');
   }
 
+  function openOrders(orderNo?: string) {
+    setCheckoutOpen(false);
+    setSelectedOrderNo(orderNo);
+    navigate('orders');
+  }
+
+  function openCheckout() {
+    setCheckoutOpen(true);
+  }
+
+  function openAdmin(view: AdminView) {
+    if (auth.user?.role !== 'admin') return;
+    navigate(adminRouteByView[view]);
+  }
+
+  const [selection, setSelected] = useState<Product | null>(null);
+  const currentSelection = selection ? products.find(product => productKey(product) === productKey(selection)) : undefined;
+  const selected = currentSelection ?? selection;
+  const inventoryAvailable = !loading && !error && !!currentSelection;
+  const featured = products.find(product => product.image_url && product.stock > 0);
+  const missing = businessOptions.filter(option => !products.some(product => product.business === option.value));
+  const unavailable = availability.filter(item => item.status === 'unavailable');
+  const emptyBusinesses = availability.filter(item => item.status === 'online' && item.product_count === 0);
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100">
-      <header className="border-b border-slate-800 bg-slate-950/95">
-        <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8 lg:py-10">
-          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-cyan-400 sm:text-sm">
-            Internet Programming Group Project
-          </p>
-          <div className="mt-3 flex flex-col justify-between gap-4 md:flex-row md:items-end">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight text-white sm:text-5xl">Moodeng MultiStore</h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400 sm:text-base">
-                Live inventory from six independent businesses, normalized into one clear product dashboard.
-              </p>
-            </div>
-            <div className="flex items-center gap-2 text-sm text-slate-400">
-              <span className={`h-2.5 w-2.5 rounded-full ${error ? 'bg-rose-400' : 'bg-emerald-400'}`} aria-hidden="true" />
-              {error ? 'API unavailable' : loading ? 'Connecting to inventory' : 'Live inventory connected'}
-            </div>
-          </div>
-        </div>
+    <div id="home">
+      <a className="skip-link" href="#explore">Skip to products</a>
+      <header className="site-header">
+        <div className="header-brand-group"><HamburgerButton expanded={navigationOpen} onClick={() => setNavigationOpen(true)} /><a className="brand" href="#/home"><span className="brand-symbol">V.</span><span>VAULT</span></a></div>
+        <div className="header-actions"><button className={`header-cart ${route === 'cart' ? 'is-active' : ''}`} onClick={() => navigate('cart')} aria-label={`Open cart with ${cart.itemCount} items`}>Cart <span>{cart.itemCount}</span></button><AccountMenu onOrders={() => openOrders()} onProfile={() => navigate('profile')} onAdmin={() => openAdmin('dashboard')} onLogout={() => navigate(logoutDestination, true)} /></div>
       </header>
-
-      <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8 lg:py-10">
-        <section aria-label="Inventory summary" className="grid grid-cols-2 gap-3 md:grid-cols-5">
-          {[
-            ['Total products', summary.total, 'text-white'],
-            ['Businesses', summary.businesses, 'text-cyan-300'],
-            ['In stock', summary.inStock, 'text-emerald-300'],
-            ['Low stock', summary.lowStock, 'text-amber-300'],
-            ['Out of stock', summary.outOfStock, 'text-rose-300'],
-          ].map(([label, value, valueClass]) => (
-            <div key={label} className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 sm:p-5">
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
-              <p className={`mt-2 text-2xl font-bold sm:text-3xl ${valueClass}`}>{value}</p>
-            </div>
-          ))}
-        </section>
-
-        <section className="mt-8 rounded-2xl border border-slate-800 bg-slate-900/70 p-4 sm:p-5" aria-label="Product filters">
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <label className="block">
-              <span className="filter-label">Search products</span>
-              <input
-                className="filter-control"
-                type="search"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search by product name"
-              />
-            </label>
-
-            <label className="block">
-              <span className="filter-label">Business</span>
-              <select className="filter-control" value={business} onChange={(event) => setBusiness(event.target.value as BusinessType | 'all')}>
-                <option value="all">All Businesses</option>
-                {businessOptions.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
-            </label>
-
-            <label className="block">
-              <span className="filter-label">Category</span>
-              <select className="filter-control" value={category} onChange={(event) => setCategory(event.target.value)}>
-                <option value="all">All Categories</option>
-                {categories.map((productCategory) => (
-                  <option key={productCategory} value={productCategory}>{productCategory}</option>
-                ))}
-              </select>
-            </label>
-
-            <label className="block">
-              <span className="filter-label">Stock status</span>
-              <select className="filter-control" value={stockStatus} onChange={(event) => setStockStatus(event.target.value as StockStatus | 'all')}>
-                <option value="all">All Stock Statuses</option>
-                {stockStatuses.map((status) => (
-                  <option key={status} value={status}>{status}</option>
-                ))}
-              </select>
-            </label>
+      <NavigationDrawer open={navigationOpen} title="VAULT" onClose={closeNavigation}>
+        <nav className="nav-drawer-links" aria-label="Customer navigation">{customerNavigation.map(item => <button type="button" key={item.route} className={isRouteActive(route, item.route) ? 'is-active' : ''} aria-current={isRouteActive(route, item.route) ? 'page' : undefined} onClick={() => { closeNavigation(); navigate(item.route); }}>{item.label}{item.route === 'cart' && <span>{cart.itemCount}</span>}</button>)}</nav>
+        <footer className="nav-drawer-footer"><div><strong>{auth.user?.name}</strong><span>{auth.user?.email}</span></div><button type="button" onClick={() => { setNavigationLogoutError(''); void auth.logout().then(() => { closeNavigation(); navigate(logoutDestination, true); }).catch(() => setNavigationLogoutError('Unable to sign out. Please try again.')); }}>Log out</button>{navigationLogoutError && <p className="account-error" role="alert">{navigationLogoutError}</p>}</footer>
+      </NavigationDrawer>
+      {route === 'profile' ? <CustomerProfile onLogout={async () => { await auth.logout(); navigate(logoutDestination, true); }} />
+        : route === 'best-sellers' ? <BestSellersPage onSelect={setSelected} /> : <main className="page-shell">
+        <section className="hero" aria-labelledby="hero-title">
+          <div className="hero-copy"><p className="eyebrow">SIX BUSINESSES. ONE DESTINATION.</p><h1 id="hero-title">A world of finds.<br /><em>All in one place.</em></h1><p className="hero-description">From the spaces you create to the essentials you carry. Discover products and explore live inventory from six independent businesses.</p><a className="primary-button" href="#explore">Explore the collection <span aria-hidden="true">↗</span></a><p className="hero-note"><span className="small-dot" /> Thoughtful discovery. A clearer view of stock.</p></div>
+          <div className="hero-visual"><span className="eyebrow hero-caption">THE EVERYDAY, RECONSIDERED</span>
+            {featured && !loading && !error ? <button className="hero-product" onClick={() => setSelected(featured)} aria-label={`View ${featured.name}`}><ProductImage product={featured} eager /><span className="hero-product-label"><span>{featured.business_name}<strong>{featured.name}</strong></span><span className="round-arrow" aria-hidden="true">↗</span></span></button> : <div className="hero-placeholder"><span className="editorial-mark">V.</span><p>Many perspectives.<br />One collection.</p></div>}
           </div>
-
-          {hasActiveFilters && (
-            <button className="mt-4 text-sm font-semibold text-cyan-300 hover:text-cyan-200" type="button" onClick={clearFilters}>
-              Clear all filters
-            </button>
-          )}
         </section>
-
-        <section className="mt-8" aria-labelledby="products-heading">
-          <div className="mb-5 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <h2 id="products-heading" className="text-2xl font-bold text-white">Product catalog</h2>
-              {!loading && !error && (
-                <p className="mt-1 text-sm text-slate-400">
-                  Showing {filteredProducts.length} of {products.length} products
-                </p>
-              )}
-            </div>
+        <section className="inventory-strip" id="inventory" aria-label="Inventory summary"><div className="inventory-intro"><p className="eyebrow">AT A GLANCE</p><h2>The inventory edit.</h2><span>{loading ? 'Connecting to inventory…' : error ? 'Inventory unavailable' : 'From the latest response'}</span></div><dl className="metrics">{[['Total products', summary.total], ['Businesses', summary.businesses], ['In Stock', summary.inStock], ['Low Stock', summary.lowStock], ['Out of Stock', summary.outOfStock]].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{loading || error ? '—' : value}</dd></div>)}</dl></section>
+        <section id="explore" className="discovery" aria-labelledby="collection-title">
+          <div className="section-heading"><div><p className="eyebrow">EXPLORE VAULT</p><h2 id="collection-title">Find your next everyday.</h2></div><p>Distinct businesses. Endless possibilities.</p></div>
+          <div id="businesses" className="business-chips" role="group" aria-label="Filter by business"><button aria-pressed={business === 'all'} onClick={() => setBusiness('all')}>All Businesses</button>{businessOptions.map(option => <button key={option.value} aria-pressed={business === option.value} onClick={() => setBusiness(option.value)}>{option.label}</button>)}</div>
+          <AiSearchBar onSelectProduct={setSelected} />
+          <div className="filter-bar">
+            <label className="search-field"><span className="sr-only">Search by product name</span><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Search for something special…" value={search} onChange={event => setSearch(event.target.value)} /></label>
+            <label className="select-field"><span>Category</span><select value={category} onChange={event => setCategory(event.target.value)}><option value="all">All categories</option>{categories.map(value => <option key={value} value={value}>{value}</option>)}</select></label>
+            <label className="select-field"><span>Availability</span><select value={stockStatus} onChange={event => setStockStatus(event.target.value as StockStatus | 'all')}><option value="all">All stock statuses</option>{stockStatuses.map(value => <option key={value} value={value}>{value}</option>)}</select></label>
           </div>
-
-          {loading && <LoadingCards />}
-
-          {!loading && error && (
-            <div className="rounded-2xl border border-rose-400/30 bg-rose-400/10 px-6 py-12 text-center" role="alert">
-              <h3 className="text-xl font-semibold text-rose-200">Unable to load inventory</h3>
-              <p className="mx-auto mt-2 max-w-xl text-sm text-rose-200/70">{error}</p>
-              <button
-                className="mt-6 rounded-lg bg-rose-300 px-4 py-2 text-sm font-bold text-slate-950 hover:bg-rose-200"
-                type="button"
-                onClick={() => setRequestVersion((version) => version + 1)}
-              >
-                Try again
-              </button>
-            </div>
-          )}
-
-          {!loading && !error && products.length === 0 && (
-            <div className="rounded-2xl border border-slate-800 bg-slate-900 px-6 py-12 text-center">
-              <h3 className="text-xl font-semibold text-white">No products available</h3>
-              <p className="mt-2 text-sm text-slate-400">The connected businesses have not returned any products yet.</p>
-            </div>
-          )}
-
-          {!loading && !error && products.length > 0 && filteredProducts.length === 0 && (
-            <div className="rounded-2xl border border-slate-800 bg-slate-900 px-6 py-12 text-center">
-              <h3 className="text-xl font-semibold text-white">No matching products</h3>
-              <p className="mt-2 text-sm text-slate-400">Try changing your search or filters.</p>
-              <button className="mt-5 text-sm font-semibold text-cyan-300 hover:text-cyan-200" type="button" onClick={clearFilters}>
-                Clear all filters
-              </button>
-            </div>
-          )}
-
-          {!loading && !error && filteredProducts.length > 0 && (
-            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-              {filteredProducts.map((product) => (
-                <ProductCard key={`${product.business}-${product.id}`} product={product} />
-              ))}
-            </div>
-          )}
+          <div className="results-toolbar"><p role="status">{loading ? 'Gathering the collection…' : error ? 'Collection unavailable' : `${filteredProducts.length} of ${products.length} products`}</p><div>{hasActiveFilters && <button className="text-button" onClick={clearFilters}>Clear filters</button>}<button className="text-button" disabled={loading} onClick={() => setRequestVersion(version => version + 1)}>Refresh inventory</button></div></div>
+          {!loading && !error && unavailable.length > 0 && <p className="availability-note">Temporarily unavailable: {unavailable.map(item => item.business_name).join(', ')}. Available businesses remain browsable.</p>}
+          {!loading && !error && emptyBusinesses.length > 0 && <p className="availability-note">Online with no products: {emptyBusinesses.map(item => item.business_name).join(', ')}.</p>}
+          {!loading && !error && availability.length === 0 && missing.length > 0 && <p className="availability-note">No products in this response from {missing.map(option => option.label).join(', ')}. Refresh to check again.</p>}
+          <div aria-busy={loading}>
+            {loading && <div className="product-grid" aria-label="Loading products">{Array.from({ length: 6 }, (_, index) => <div className="skeleton-card" key={index}><div /><span /><span /></div>)}</div>}
+            {!loading && error && <div className="empty-state" role="alert"><p className="eyebrow">LET’S TRY THAT AGAIN</p><h3>The collection is taking a moment.</h3><p>{error}</p><button className="primary-button" onClick={() => setRequestVersion(version => version + 1)}>Try again ↗</button></div>}
+            {!loading && !error && products.length === 0 && <div className="empty-state"><h3>A little quiet here, for now.</h3><p>No products were returned. Refresh inventory to check again.</p></div>}
+            {!loading && !error && products.length > 0 && filteredProducts.length === 0 && <div className="empty-state"><h3>Room for a different discovery.</h3><p>No products match your search and filters.</p><button className="primary-button" onClick={clearFilters}>Clear filters</button></div>}
+            {!loading && !error && filteredProducts.length > 0 && <div className="product-grid">{filteredProducts.map(product => <ProductCard key={JSON.stringify([product.business, product.id])} product={product} onSelect={setSelected} />)}</div>}
+          </div>
         </section>
-      </div>
-    </main>
+        <footer className="site-footer"><a className="footer-brand" href="#/home">VAULT — Multi-Store Marketplace Application</a><p>Six independent businesses. One shared perspective.</p><a href="#/home">Back to top ↑</a></footer>
+      </main>}
+      {selected && <ProductDetail key={productKey(selected)} product={selected} onClose={() => setSelected(null)}
+        inventoryAvailable={inventoryAvailable}
+        favorite={favorites.favorites.includes(productKey(selected))}
+        onFavorite={() => setFavorites(current => ({ favorites: current.favorites.includes(productKey(selected)) ? current.favorites.filter(key => key !== productKey(selected)) : [...current.favorites, productKey(selected)] }))}
+        onSelectProduct={setSelected} />}
+      <CartDrawer onClose={() => { cart.closeCart(); if (route === 'cart') navigate('home'); }} onExplore={() => { navigate('products'); document.querySelector('#explore')?.scrollIntoView({ behavior: 'smooth' }); }} onCheckout={() => { navigate('home'); openCheckout(); }} />
+      {checkoutOpen && <Checkout onClose={() => setCheckoutOpen(false)}
+        onContinue={() => document.querySelector('#explore')?.scrollIntoView({ behavior: 'smooth' })}
+        onViewOrder={openOrders} />}
+      {ordersOpen && <OrderHistory key={selectedOrderNo || 'history'} initialOrderNo={selectedOrderNo}
+        onClose={() => { setSelectedOrderNo(undefined); navigate('home'); }}
+        onViewClaim={claimNumber => { setSelectedOrderNo(undefined); setSelectedClaimNumber(claimNumber); navigate('claims'); }} />}
+      {claimsOpen && <MyClaims key={selectedClaimNumber || 'claims'} initialClaimNumber={selectedClaimNumber}
+        onClose={() => { setSelectedClaimNumber(undefined); navigate('home'); }} />}
+      <AiChatWidget />
+    </div>
   );
 }
-
 export default App;
