@@ -6,6 +6,7 @@ import type { NextFunction, Request, Response } from 'express';
 import apiRouter from './routes/index.js';
 import { productUploadDirectory } from './middleware/productImageUpload.js';
 import { profileUploadDirectory } from './middleware/profileImageUpload.js';
+import { configuredGeminiModel } from './services/ai/geminiClient.js';
 
 const app = express();
 const port = Number(process.env.PORT ?? process.env.BACKEND_PORT ?? 3000);
@@ -28,4 +29,5 @@ app.use((error: unknown, _request: Request, response: Response, _next: NextFunct
 
 app.listen(port, '0.0.0.0', () => {
   console.log(`VAULT API listening on port ${port}`);
+  console.log(`[VAULT AI] Gemini model: ${configuredGeminiModel()}`);
 });

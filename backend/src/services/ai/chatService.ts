@@ -9,7 +9,7 @@ import { getCachedProducts } from './productsCache.js';
 
 const MAX_MESSAGES = 20;
 const MAX_MESSAGE_LENGTH = 4000;
-const MAX_PRODUCTS_IN_CONTEXT = 200;
+const MAX_PRODUCTS_IN_CONTEXT = 50;
 const MAX_ORDERS_IN_CONTEXT = 15;
 
 export interface ChatServiceDependencies {

@@ -4,14 +4,19 @@ import { orderRepository } from '../../repositories/orderRepository.js';
 import type { NormalizedProduct } from '../../types/product.js';
 import { claimService } from '../claimService.js';
 import { profileService } from '../profileService.js';
-import { bestSellerService } from '../bestSellerService.js';
+import { createBestSellerService } from '../bestSellerService.js';
 import { getCachedProducts } from './productsCache.js';
+import type { ExecutedToolResult } from './geminiClient.js';
 
 const DEFAULT_LIMIT = 10;
 const MAX_RESULTS = 20;
 const businesses = ['vault', 'door', 'plug', 'brandname', 'clothing', 'powerbank', 'projector'] as const;
 const validBusinesses = new Set<string>(businesses);
 type Json = Record<string, unknown>;
+
+const aiBestSellerService = createBestSellerService({
+  getProductAggregation: async () => ({ products: await getCachedProducts(), businesses: [] }),
+});
 
 export interface DatabaseToolDependencies {
   getProducts(): Promise<NormalizedProduct[]>;
@@ -21,7 +26,7 @@ export interface DatabaseToolDependencies {
   getClaims(userId: number, query: unknown): ReturnType<typeof claimService.listClaims>;
   getClaim(userId: number, claimNumber: string): ReturnType<typeof claimService.getClaim>;
   getWarranty(userId: number, orderNo: string): ReturnType<typeof claimService.getWarrantyDocument>;
-  getBestSellers(query: unknown): ReturnType<typeof bestSellerService.list>;
+  getBestSellers(query: unknown): ReturnType<typeof aiBestSellerService.list>;
 }
 
 const defaults: DatabaseToolDependencies = {
@@ -32,7 +37,7 @@ const defaults: DatabaseToolDependencies = {
   getClaims: (userId, query) => claimService.listClaims(userId, query),
   getClaim: (userId, claimNumber) => claimService.getClaim(userId, claimNumber),
   getWarranty: (userId, orderNo) => claimService.getWarrantyDocument(userId, orderNo),
-  getBestSellers: query => bestSellerService.list(query),
+  getBestSellers: query => aiBestSellerService.list(query),
 };
 
 const schema = (properties: Json, required: string[] = []) => ({
@@ -42,7 +47,7 @@ const schema = (properties: Json, required: string[] = []) => ({
 export const databaseToolDeclarations: FunctionDeclaration[] = [
   {
     name: 'search_products',
-    description: 'Search the current real VAULT catalog. Use for products, prices, stock, categories, businesses, and availability.',
+    description: 'One complete, answer-ready lookup for product search, recommendations, price, stock, category, store, status, and availability. Each result already includes all those current fields; do not call get_product_details afterward.',
     parametersJsonSchema: schema({
       query: { type: 'string', description: 'Product name or keywords.' },
       category: { type: 'string' }, business: { type: 'string', enum: businesses },
@@ -51,35 +56,35 @@ export const databaseToolDeclarations: FunctionDeclaration[] = [
     }),
   },
   {
-    name: 'get_product_details', description: 'Get one current product by product id and business.',
+    name: 'get_product_details', description: 'Get one exact current product only when both its product id and business are already known. Do not use after search_products because search results are already complete.',
     parametersJsonSchema: schema({ product_id: { type: 'string' }, business: { type: 'string', enum: businesses } }, ['product_id', 'business']),
   },
   {
-    name: 'get_best_sellers', description: 'Get products ranked by real completed-order unit sales, optionally for one business.',
+    name: 'get_best_sellers', description: 'One complete, answer-ready lookup for products ranked by real completed-order sales, including current price and stock. Do not follow with another product tool.',
     parametersJsonSchema: schema({
       business: { type: 'string', enum: businesses }, limit: { type: 'integer', minimum: 1, maximum: MAX_RESULTS },
     }),
   },
-  { name: 'get_my_profile', description: 'Get the signed-in customer safe profile and shipping contact fields.', parametersJsonSchema: schema({}) },
+  { name: 'get_my_profile', description: 'One complete, answer-ready lookup for the signed-in customer safe profile and shipping contact fields. No follow-up tool is needed.', parametersJsonSchema: schema({}) },
   {
-    name: 'get_my_orders', description: 'List the signed-in customer orders newest first. Use limit 1 for the latest order.',
+    name: 'get_my_orders', description: 'One complete, answer-ready lookup for order lists, latest order, status, total, item count, and date. Orders are newest first; use limit 1 for the latest. Do not call get_my_order_details unless the shopper explicitly asks for line items or shipping details.',
     parametersJsonSchema: schema({ limit: { type: 'integer', minimum: 1, maximum: MAX_RESULTS } }),
   },
   {
-    name: 'get_my_order_details', description: 'Get status, items, totals, and shipping address for an order owned by the signed-in customer.',
-    parametersJsonSchema: schema({ order_no: { type: 'string' } }, ['order_no']),
+    name: 'get_my_order_details', description: 'One complete, answer-ready lookup for status, line items, totals, and shipping address. Provide order_no when the shopper gives one; omit it to retrieve the latest owned order directly.',
+    parametersJsonSchema: schema({ order_no: { type: 'string', description: 'Owned order number. Omit for the latest order.' } }),
   },
   {
-    name: 'get_my_claims', description: 'List claims belonging to the signed-in customer, newest first.',
+    name: 'get_my_claims', description: 'One complete, answer-ready lookup for claim lists, latest claim, status, reason, product, store, and dates. Claims are newest first; use limit 1 for the latest.',
     parametersJsonSchema: schema({ status: { type: 'string' }, limit: { type: 'integer', minimum: 1, maximum: MAX_RESULTS } }),
   },
   {
-    name: 'get_my_claim_status', description: 'Get details and status history for one claim belonging to the signed-in customer.',
-    parametersJsonSchema: schema({ claim_number: { type: 'string' } }, ['claim_number']),
+    name: 'get_my_claim_status', description: 'One complete, answer-ready lookup for claim details and status history. Provide claim_number when the shopper gives one; omit it to retrieve the latest claim directly.',
+    parametersJsonSchema: schema({ claim_number: { type: 'string', description: 'Owned claim number. Omit for the latest claim.' } }),
   },
   {
-    name: 'get_warranty_information', description: 'Check claim eligibility, claim window expiry, claimable items, and existing claims for an owned order.',
-    parametersJsonSchema: schema({ order_no: { type: 'string' } }, ['order_no']),
+    name: 'get_warranty_information', description: 'One complete, answer-ready lookup for warranty/claim eligibility, expiry, claimable items, and existing claims. Provide order_no when given; omit it to check the latest owned order directly.',
+    parametersJsonSchema: schema({ order_no: { type: 'string', description: 'Owned order number. Omit for the latest order.' } }),
   },
 ];
 
@@ -112,11 +117,103 @@ function requireUser(userId: number | null): number {
   return userId;
 }
 
+function rows(value: unknown): Json[] {
+  return Array.isArray(value) ? value.map(record) : [];
+}
+
+function money(value: unknown): string {
+  const amount = Number(value);
+  return Number.isFinite(amount) ? `${amount.toLocaleString('th-TH')} บาท` : 'ไม่ระบุราคา';
+}
+
+function productSummary(product: Json): string {
+  const name = typeof product.name === 'string' ? product.name : 'สินค้า';
+  const business = typeof product.business_name === 'string' ? ` จาก ${product.business_name}` : '';
+  const stock = Number(product.stock);
+  const stockText = Number.isFinite(stock) ? `คงเหลือ ${stock.toLocaleString('th-TH')} ชิ้น` : String(product.status ?? 'ไม่ทราบสต็อก');
+  return `${name}${business} ราคา ${money(product.price)} (${stockText})`;
+}
+
+function renderOneToolResult({ call, result }: ExecutedToolResult): string {
+  if ('error' in result) return 'ขออภัยค่ะ ไม่สามารถตรวจสอบข้อมูลล่าสุดได้ในขณะนี้ กรุณาลองใหม่อีกครั้งค่ะ';
+  switch (call.name) {
+    case 'search_products': {
+      const products = rows(result.products);
+      return products.length
+        ? `พบสินค้าที่ตรงกับคำถามค่ะ\n${products.slice(0, 5).map(product => `• ${productSummary(product)}`).join('\n')}`
+        : 'ไม่พบสินค้าที่ตรงกับเงื่อนไขในข้อมูลล่าสุดค่ะ';
+    }
+    case 'get_product_details': {
+      return result.found === true ? productSummary(record(result.product)) : 'ไม่พบสินค้านี้ในข้อมูลล่าสุดค่ะ';
+    }
+    case 'get_best_sellers': {
+      const sellers = rows(result.best_sellers);
+      return sellers.length
+        ? `สินค้าขายดีล่าสุดค่ะ\n${sellers.slice(0, 5).map(item => `• อันดับ ${item.rank}: ${productSummary(record(item.product))}`).join('\n')}`
+        : 'ยังไม่มีข้อมูลสินค้าขายดีที่ตรวจสอบได้ค่ะ';
+    }
+    case 'get_my_orders': {
+      const orders = rows(result.orders);
+      return orders.length
+        ? orders.slice(0, 5).map(order => `คำสั่งซื้อ ${String(order.order_no)} สถานะ ${String(order.status)} ยอดรวม ${money(order.total)}`).join('\n')
+        : 'ยังไม่พบคำสั่งซื้อในบัญชีนี้ค่ะ';
+    }
+    case 'get_my_order_details': {
+      if (result.found !== true) return 'ไม่พบคำสั่งซื้อในบัญชีนี้ค่ะ';
+      const order = record(result.order);
+      const items = rows(order.items).map(item => `${String(item.product_name)} × ${String(item.quantity)}`).join(', ');
+      return `คำสั่งซื้อ ${String(order.order_no)} สถานะ ${String(order.status)} ยอดรวม ${money(order.total)}${items ? ` รายการ: ${items}` : ''}`;
+    }
+    case 'get_my_claims': {
+      const claims = rows(result.claims);
+      return claims.length
+        ? claims.slice(0, 5).map(claim => `เคลม ${String(claim.claim_number)} สถานะ ${String(claim.status)} สินค้า ${String(claim.product_name)}`).join('\n')
+        : 'ยังไม่พบรายการเคลมในบัญชีนี้ค่ะ';
+    }
+    case 'get_my_claim_status': {
+      if (result.found !== true) return 'ไม่พบรายการเคลมในบัญชีนี้ค่ะ';
+      const claim = record(result.claim);
+      return `เคลม ${String(claim.claim_number)} สถานะ ${String(claim.status)} สำหรับคำสั่งซื้อ ${String(claim.order_no)} ค่ะ`;
+    }
+    case 'get_warranty_information': {
+      if (result.found !== true) return 'ไม่พบคำสั่งซื้อสำหรับตรวจสอบการรับประกันค่ะ';
+      const warranty = record(result.warranty);
+      return warranty.eligible === true
+        ? `คำสั่งซื้อ ${String(warranty.order_no)} ยังมีสิทธิ์เคลม${warranty.claim_window_expires_at ? `ถึง ${String(warranty.claim_window_expires_at)}` : ''} ค่ะ`
+        : `คำสั่งซื้อ ${String(warranty.order_no)} ไม่สามารถเคลมได้${warranty.ineligible_reason ? `: ${String(warranty.ineligible_reason)}` : ''} ค่ะ`;
+    }
+    case 'get_my_profile': {
+      const profile = record(result.profile);
+      const name = typeof profile.name === 'string' ? profile.name : 'ไม่ระบุชื่อ';
+      const email = typeof profile.email === 'string' ? ` อีเมล ${profile.email}` : '';
+      const phone = typeof profile.phone === 'string' && profile.phone ? ` โทร ${profile.phone}` : '';
+      return `ข้อมูลโปรไฟล์: ${name}${email}${phone} ค่ะ`;
+    }
+    default: return 'ตรวจสอบข้อมูลล่าสุดเรียบร้อยแล้วค่ะ กรุณาลองถามอีกครั้งโดยระบุสิ่งที่ต้องการทราบค่ะ';
+  }
+}
+
+/** Grounded last-resort response when Gemini fails to turn successful tool data into text. */
+export function renderDatabaseToolFallback(results: ExecutedToolResult[]): string {
+  return results.length
+    ? results.map(renderOneToolResult).join('\n\n')
+    : 'ขออภัยค่ะ ไม่สามารถตรวจสอบข้อมูลล่าสุดได้ในขณะนี้ กรุณาลองใหม่อีกครั้งค่ะ';
+}
+
+async function newestOrderNo(dependencies: DatabaseToolDependencies, userId: number): Promise<string | null> {
+  return (await dependencies.getOrders(userId))[0]?.order_no ?? null;
+}
+
+async function newestClaimNumber(dependencies: DatabaseToolDependencies, userId: number): Promise<string | null> {
+  const result = await dependencies.getClaims(userId, { status: 'all', page: 1, page_size: 1 });
+  return result.claims[0]?.claim_number ?? null;
+}
+
 function productView(product: NormalizedProduct) {
   return {
     id: product.id, business: product.business, business_name: product.business_name,
     name: product.name, category: product.category, price: product.price, stock: product.stock,
-    unit: product.unit, status: product.status,
+    status: product.status,
   };
 }
 
@@ -168,8 +265,13 @@ export function createDatabaseToolExecutor(userId: number | null, overrides: Par
         return { total: orders.length, returned: Math.min(orders.length, limit), orders: orders.slice(0, limit) };
       }
       case 'get_my_order_details': {
-        const orderNo = textArg(args, 'order_no', /^MDG-\d{8}-[A-Z0-9]{6}$/i).toUpperCase();
-        const order = await dependencies.getOrder(orderNo, requireUser(userId));
+        const ownerId = requireUser(userId);
+        const suppliedOrderNo = typeof args.order_no === 'string' && args.order_no.trim()
+          ? textArg(args, 'order_no', /^MDG-\d{8}-[A-Z0-9]{6}$/i).toUpperCase()
+          : null;
+        const orderNo = suppliedOrderNo ?? await newestOrderNo(dependencies, ownerId);
+        if (!orderNo) return { found: false, reason: 'NO_ORDERS' };
+        const order = await dependencies.getOrder(orderNo, ownerId);
         return order ? { found: true, order } : { found: false };
       }
       case 'get_my_claims': {
@@ -179,13 +281,23 @@ export function createDatabaseToolExecutor(userId: number | null, overrides: Par
         return { total: result.total, returned: result.claims.length, claims: result.claims };
       }
       case 'get_my_claim_status': {
-        const number = textArg(args, 'claim_number', /^CLM-\d{8}-\d{6}$/i).toUpperCase();
-        try { return { found: true, claim: await dependencies.getClaim(requireUser(userId), number) }; }
+        const ownerId = requireUser(userId);
+        const suppliedNumber = typeof args.claim_number === 'string' && args.claim_number.trim()
+          ? textArg(args, 'claim_number', /^CLM-\d{8}-\d{6}$/i).toUpperCase()
+          : null;
+        const number = suppliedNumber ?? await newestClaimNumber(dependencies, ownerId);
+        if (!number) return { found: false, reason: 'NO_CLAIMS' };
+        try { return { found: true, claim: await dependencies.getClaim(ownerId, number) }; }
         catch (error) { if (error instanceof ApiError && error.status === 404) return { found: false }; throw error; }
       }
       case 'get_warranty_information': {
-        const orderNo = textArg(args, 'order_no', /^MDG-\d{8}-[A-Z0-9]{6}$/i).toUpperCase();
-        try { return { found: true, warranty: await dependencies.getWarranty(requireUser(userId), orderNo) }; }
+        const ownerId = requireUser(userId);
+        const suppliedOrderNo = typeof args.order_no === 'string' && args.order_no.trim()
+          ? textArg(args, 'order_no', /^MDG-\d{8}-[A-Z0-9]{6}$/i).toUpperCase()
+          : null;
+        const orderNo = suppliedOrderNo ?? await newestOrderNo(dependencies, ownerId);
+        if (!orderNo) return { found: false, reason: 'NO_ORDERS' };
+        try { return { found: true, warranty: await dependencies.getWarranty(ownerId, orderNo) }; }
         catch (error) { if (error instanceof ApiError && error.status === 404) return { found: false }; throw error; }
       }
       default: throw new ApiError(400, 'UNKNOWN_AI_TOOL', 'The requested assistant operation is not allowed.');

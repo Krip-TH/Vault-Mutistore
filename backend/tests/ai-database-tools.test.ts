@@ -32,6 +32,20 @@ test('product search uses current service data and applies price/stock filters',
   const rows = result.products as Array<{ price: number; stock: number }>;
   assert.ok(rows.length > 0);
   assert.ok(rows.every(row => row.price <= 500 && row.stock > 0));
+  assert.deepEqual(Object.keys((result.products as Array<Record<string, unknown>>)[0]).sort(), [
+    'business', 'business_name', 'category', 'id', 'name', 'price', 'status', 'stock',
+  ]);
+});
+
+test('database chat uses a bounded two-request Gemini flow', async () => {
+  let maxIterations = 0;
+  await chatWithDatabaseAssistant({ messages: [{ role: 'user', content: 'มีสินค้าอะไรบ้าง' }] }, null, {
+    generateReply: async options => {
+      maxIterations = options.maxIterations ?? 0;
+      return 'พร้อมช่วยค่ะ';
+    },
+  });
+  assert.equal(maxIterations, 2);
 });
 
 test('tool result limiting is capped at 20 even when a larger limit is supplied', async () => {
@@ -63,6 +77,30 @@ test('claim and warranty lookup is scoped to the signed-in user', async () => {
   const result = await execute({ name: 'get_warranty_information', args: { order_no: 'MDG-20260920-ABC123' } });
   assert.equal(received, 7);
   assert.equal((result.warranty as { eligible: boolean }).eligible, true);
+});
+
+test('latest order details and warranty resolve inside one tool call without a supplied order number', async () => {
+  const execute = createDatabaseToolExecutor(7, dependencies());
+  const order = await execute({ name: 'get_my_order_details', args: {} });
+  const warranty = await execute({ name: 'get_warranty_information', args: {} });
+  assert.equal((order.order as { order_no: string }).order_no, 'MDG-20260920-ABC123');
+  assert.equal((warranty.warranty as { order_no: string }).order_no, 'MDG-20260920-ABC123');
+});
+
+test('latest claim details resolve inside one tool call without a supplied claim number', async () => {
+  let requestedClaim = '';
+  const execute = createDatabaseToolExecutor(7, dependencies({
+    getClaims: async () => ({
+      claims: [{ claim_number: 'CLM-20260920-123456' }] as never[], total: 1, page: 1, page_size: 1,
+    }),
+    getClaim: async (_userId, claimNumber) => {
+      requestedClaim = claimNumber;
+      return { claim_number: claimNumber } as never;
+    },
+  }));
+  const result = await execute({ name: 'get_my_claim_status', args: {} });
+  assert.equal(requestedClaim, 'CLM-20260920-123456');
+  assert.equal((result.claim as { claim_number: string }).claim_number, requestedClaim);
 });
 
 test('unknown products return found false', async () => {

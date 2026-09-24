@@ -6,6 +6,7 @@ const CACHE_TTL_MS = 20_000; // 20 seconds
 const CACHE_KEY = 'products';
 
 const cache = new TtlCache<NormalizedProduct[]>(CACHE_TTL_MS);
+let inFlight: Promise<NormalizedProduct[]> | null = null;
 
 /**
  * Aggregating all six business adapters is a real network round-trip (~2s even when nothing
@@ -18,7 +19,12 @@ export async function getCachedProducts(): Promise<NormalizedProduct[]> {
   const cached = cache.get(CACHE_KEY);
   if (cached) return cached;
 
-  const products = (await productService.getProductAggregation()).products;
-  cache.set(CACHE_KEY, products);
-  return products;
+  if (inFlight) return inFlight;
+  inFlight = productService.getProductAggregation()
+    .then(aggregation => {
+      cache.set(CACHE_KEY, aggregation.products);
+      return aggregation.products;
+    })
+    .finally(() => { inFlight = null; });
+  return inFlight;
 }

@@ -3,7 +3,7 @@ import {
   KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { sendChatMessage } from '../aiApi';
+import { AiChatExpectedError, sendChatMessage } from '../aiApi';
 import { colors } from '../theme';
 import type { ChatMessage } from '../types';
 
@@ -30,7 +30,9 @@ export default function AiChatWidget() {
       const response = await sendChatMessage(history);
       setMessages([...history, { role: 'assistant', content: response.reply }]);
     } catch (requestError) {
-      console.error('[VAULT AI] Chat request failed.', requestError);
+      if (!(requestError instanceof AiChatExpectedError)) {
+        console.error('[VAULT AI] Chat request failed.', requestError);
+      }
       const message = requestError instanceof Error ? requestError.message : 'The assistant is unavailable right now.';
       setMessages([...history, { role: 'assistant', content: message }]);
     } finally {

@@ -195,10 +195,10 @@ To enable it, set two variables in your local `.env` (never commit this file):
 
 ```
 GEMINI_API_KEY=your-real-key-here
-GEMINI_MODEL=gemini-2.5-flash
+GEMINI_MODEL=gemini-3.6-flash
 ```
 
-Which model names are available depends on your Google Cloud project (older projects may still use `gemini-2.5-flash`; newer ones are pointed at `gemini-3.6-flash` or later) — if you see a `404 ... no longer available` error in the backend logs, switch `GEMINI_MODEL` to whatever current model name Google's error message recommends.
+`GEMINI_MODEL` is the runtime source of truth and currently defaults to `gemini-3.6-flash` in both Docker Compose and the backend. Model access can vary by Google project; verify availability with the configured key before changing it. A `404 MODEL_NOT_FOUND` entry in the backend log means the selected model is unavailable to that project.
 
 Restart the backend (`docker compose up -d backend` or `npm run dev`) after changing either value.
 

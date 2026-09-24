@@ -12,7 +12,7 @@ const configuredBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL?.trim();
 export const API_BASE_URL = (configuredBaseUrl || 'http://localhost:3000').replace(/\/+$/, '');
 export const API_BASE_URL_IS_CONFIGURED = Boolean(configuredBaseUrl);
 
-export const REQUEST_TIMEOUT_MS = 15_000;
+export const REQUEST_TIMEOUT_MS = 60_000;
 
 export function resolveApiUrl(path: string): string {
   if (!path) return path;
