@@ -29,5 +29,5 @@ backend/uploads/profiles/*
 backend/uploads/claims/*
 !backend/uploads/claims/.gitkeep
 /uploads/
-/vault_multistore_import.sql
-/vault_multistore_legacy_backup_*.sql
+/IP_Final_Group_Project_import.sql
+/IP_Final_Group_Project_legacy_backup_*.sql
