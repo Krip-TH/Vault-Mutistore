@@ -5,6 +5,7 @@ node_modules/
 dist/
 build/
 coverage/
+.tmp/
 logs/
 *.log
 npm-debug.log*
@@ -27,3 +28,4 @@ backend/uploads/profiles/*
 !backend/uploads/profiles/.gitkeep
 backend/uploads/claims/*
 !backend/uploads/claims/.gitkeep
+/uploads/

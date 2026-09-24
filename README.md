@@ -36,6 +36,7 @@ See [the API contract](docs/API_CONTRACT.md) for normalized fields and [the memb
 ```text
 VAULT/
 |-- frontend/            React storefront, customer flows, and admin dashboard
+|-- mobile/              Expo React Native app for iOS and Android
 |-- backend/             Express API, authentication, orders, claims, admin, and adapters
 |-- database/init.sql    Complete fresh-install MySQL schema
 |-- database/migrations/ Historical and forward database migrations
